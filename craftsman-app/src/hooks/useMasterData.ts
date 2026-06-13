@@ -6,7 +6,7 @@ import type { Employee, Machine, Material, Company } from '../types';
 export function useEmployees(activeOnly = true) {
   return useLiveQuery(
     () => activeOnly
-      ? db.employees.where('active').equals(1).sortBy('lastName')
+      ? db.employees.filter(e => !!e.active).sortBy('lastName')
       : db.employees.orderBy('lastName').toArray(),
     [activeOnly]
   );
@@ -15,7 +15,7 @@ export function useEmployees(activeOnly = true) {
 export function useMachines(activeOnly = true) {
   return useLiveQuery(
     () => activeOnly
-      ? db.machines.where('active').equals(1).sortBy('name')
+      ? db.machines.filter(e => !!e.active).sortBy('name')
       : db.machines.orderBy('name').toArray(),
     [activeOnly]
   );
@@ -24,7 +24,7 @@ export function useMachines(activeOnly = true) {
 export function useMaterials(activeOnly = true) {
   return useLiveQuery(
     () => activeOnly
-      ? db.materials.where('active').equals(1).sortBy('name')
+      ? db.materials.filter(e => !!e.active).sortBy('name')
       : db.materials.orderBy('name').toArray(),
     [activeOnly]
   );

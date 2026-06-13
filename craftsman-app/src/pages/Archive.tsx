@@ -223,6 +223,7 @@ export default function Archive() {
             />
           </div>
           <button
+            aria-label="Filter"
             onClick={() => setShowFilters(v => !v)}
             className={cn(
               'flex items-center gap-1.5 px-3 py-2.5 rounded-xl border text-sm font-medium transition-colors relative',
@@ -239,6 +240,7 @@ export default function Archive() {
             )}
           </button>
           <button
+            aria-label="Sortierung"
             onClick={() => setSortOrder(o => o === 'newest' ? 'oldest' : 'newest')}
             className="flex items-center gap-1.5 px-3 py-2.5 rounded-xl border border-gray-200 bg-white text-sm text-gray-600"
           >
