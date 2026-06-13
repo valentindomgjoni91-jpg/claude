@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Plus, Trash2, Clock, BarChart2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Play, Square, Plus, Trash2, Clock, BarChart2, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from 'date-fns';
 import { de } from 'date-fns/locale';
@@ -22,6 +22,7 @@ export default function TimeTracking() {
   const tabs = [
     { id: 'timer', label: 'Stoppuhr', icon: <Clock size={14} /> },
     { id: 'week', label: 'Woche', icon: <BarChart2 size={14} /> },
+    { id: 'projects', label: 'Projekte', icon: <Briefcase size={14} /> },
   ];
 
   return (
@@ -33,6 +34,7 @@ export default function TimeTracking() {
       <div className="px-4 pb-8">
         {activeTab === 'timer' && <TimerTab />}
         {activeTab === 'week' && <WeekTab />}
+        {activeTab === 'projects' && <ProjectsTab />}
       </div>
     </div>
   );
@@ -430,6 +432,91 @@ function WeekTab() {
       {filteredEntries.length === 0 && (
         <div className="text-center py-8 text-gray-400 text-sm">
           Keine Zeiteinträge für diese Woche.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Projects Tab ----
+
+function ProjectsTab() {
+  const projects = useProjects();
+
+  const data = useLiveQuery(async () => {
+    const [allEntries, dailyReports, regiReports] = await Promise.all([
+      db.timeEntries.toArray(),
+      db.dailyReports.toArray(),
+      db.regiReports.toArray(),
+    ]);
+
+    const reportProjectMap: Record<string, string> = {};
+    for (const r of dailyReports) reportProjectMap[r.id] = r.projectId;
+    for (const r of regiReports) reportProjectMap[r.id] = r.projectId;
+
+    const grouped: Record<string, number> = {};
+    let unlinked = 0;
+
+    for (const entry of allEntries) {
+      const projectId = reportProjectMap[entry.reportId];
+      if (projectId) {
+        grouped[projectId] = (grouped[projectId] || 0) + entry.totalHours;
+      } else {
+        unlinked += entry.totalHours;
+      }
+    }
+
+    return { grouped, unlinked };
+  }, []);
+
+  const projectMap = Object.fromEntries(projects?.map(p => [p.id, p]) || []);
+
+  const rows = Object.entries(data?.grouped || {})
+    .map(([projectId, hours]) => ({ project: projectMap[projectId], hours }))
+    .filter(r => !!r.project)
+    .sort((a, b) => b.hours - a.hours);
+
+  const totalHours = rows.reduce((s, r) => s + r.hours, 0) + (data?.unlinked ?? 0);
+
+  return (
+    <div className="space-y-3">
+      <div className="bg-primary-50 rounded-2xl px-4 py-3 flex justify-between items-center">
+        <span className="text-sm font-medium text-primary-700">Total erfasst</span>
+        <span className="text-xl font-bold text-primary-900">{formatHours(totalHours)}</span>
+      </div>
+
+      {rows.map(({ project, hours }) => (
+        <div key={project.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
+          <div className="flex justify-between items-start mb-2">
+            <div>
+              <div className="font-medium text-sm text-gray-900">{project.title}</div>
+              <div className="text-xs text-gray-500">{project.clientName}</div>
+            </div>
+            <span className="font-bold text-primary-700">{formatHours(hours)}</span>
+          </div>
+          {totalHours > 0 && (
+            <div className="w-full bg-gray-100 rounded-full h-1.5">
+              <div
+                className="bg-primary-500 h-1.5 rounded-full transition-all"
+                style={{ width: `${(hours / totalHours) * 100}%` }}
+              />
+            </div>
+          )}
+        </div>
+      ))}
+
+      {(data?.unlinked ?? 0) > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 opacity-60">
+          <div className="flex justify-between items-center">
+            <div className="text-sm text-gray-500">Ohne Projekt (Stoppuhr / manuell)</div>
+            <span className="font-bold text-gray-500">{formatHours(data!.unlinked)}</span>
+          </div>
+        </div>
+      )}
+
+      {rows.length === 0 && totalHours === 0 && (
+        <div className="text-center py-8 text-gray-400 text-sm">
+          Noch keine Zeiteinträge in Rapporte erfasst.
         </div>
       )}
     </div>

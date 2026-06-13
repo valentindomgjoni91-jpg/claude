@@ -19,20 +19,31 @@ export function generateRegiReportPdf(data: RegiReportPdfData): jsPDF {
   let y = margin;
 
   // Header
+  const headerH = 32;
   doc.setFillColor(29, 78, 216);
-  doc.rect(0, 0, pageWidth, 28, 'F');
+  doc.rect(0, 0, pageWidth, headerH, 'F');
   doc.setTextColor(255, 255, 255);
+
+  if (company?.logoUrl) {
+    try {
+      const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(company.logoUrl, fmt, margin, 5, 30, 22);
+    } catch { /* skip invalid logo */ }
+  }
+
+  const titleX = company?.logoUrl ? margin + 33 : margin;
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('REGIERAPPORT', margin, 13);
+  doc.text('REGIERAPPORT', titleX, 14);
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   if (company) {
-    doc.text(company.name, pageWidth - margin, 13, { align: 'right' });
-    doc.text(`${company.street}, ${company.zip} ${company.city}`, pageWidth - margin, 19, { align: 'right' });
-    if (company.phone) doc.text(company.phone, pageWidth - margin, 23, { align: 'right' });
+    doc.text(company.name, pageWidth - margin, 10, { align: 'right' });
+    doc.text(`${company.street}, ${company.zip} ${company.city}`, pageWidth - margin, 16, { align: 'right' });
+    if (company.phone) doc.text(company.phone, pageWidth - margin, 22, { align: 'right' });
   }
-  y = 36;
+  y = headerH + 8;
 
   // Report info
   doc.setTextColor(0, 0, 0);
@@ -226,7 +237,10 @@ export function generateRegiReportPdf(data: RegiReportPdfData): jsPDF {
     doc.setFontSize(7.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(150, 150, 150);
-    doc.text(company?.footerText || '', margin, footerY, { maxWidth: 120 });
+    doc.text(company?.footerText || '', margin, footerY, { maxWidth: 80 });
+    if (company?.bankAccount) {
+      doc.text(`IBAN: ${company.bankAccount}`, pageWidth / 2, footerY, { align: 'center' });
+    }
     doc.text(`Seite ${i} / ${totalPages}`, pageWidth - margin, footerY, { align: 'right' });
   }
 
