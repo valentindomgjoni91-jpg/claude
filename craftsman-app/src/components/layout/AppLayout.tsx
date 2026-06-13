@@ -2,6 +2,7 @@ import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, Clock, FileText, Settings, Wifi, WifiOff } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAppStore } from '../../stores/useAppStore';
+import { useSyncStatus } from '../../sync/useSyncStatus';
 import { useEffect } from 'react';
 
 const navItems = [
@@ -15,6 +16,7 @@ const navItems = [
 export default function AppLayout() {
   const location = useLocation();
   const { isOnline, syncPending, setOnline } = useAppStore();
+  useSyncStatus();
 
   useEffect(() => {
     const onOnline = () => setOnline(true);

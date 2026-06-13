@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
-  Check, Clock, Package, Truck, FileText, Image, Plus, Trash2,
-  Camera, Download, ChevronDown, ChevronUp
+  Check, Clock, Package, Truck, FileText, Image, Users,
+  Plus, Trash2, Camera, Download, ChevronDown, ChevronUp
 } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
@@ -18,6 +18,7 @@ import {
   addTimeEntry, updateTimeEntry, deleteTimeEntry,
   addMaterialEntry, deleteMaterialEntry,
   addMachineEntry, deleteMachineEntry,
+  addSubcontractorEntry, deleteSubcontractorEntry,
   addPhoto, deletePhoto,
 } from '../hooks/useDailyReports';
 import { useProjects } from '../hooks/useProjects';
@@ -44,7 +45,7 @@ export default function DailyReportForm() {
   const employees = useEmployees();
   const machines = useMachines();
   const materials = useMaterials();
-  useCompany(); // loaded for PDF generation
+  useCompany();
 
   const [activeTab, setActiveTab] = useState('info');
   const [saving, setSaving] = useState(false);
@@ -104,10 +105,11 @@ export default function DailyReportForm() {
         weather: (form.weather || undefined) as Weather | undefined,
         temperature: form.temperature ? Number(form.temperature) : undefined,
         notes: form.notes || undefined,
-        status: complete ? 'completed' as const : form.status,
+        status: complete ? 'completed' as const : (form.status as 'draft' | 'completed'),
       };
       if (reportId) {
         await updateDailyReport(reportId, data);
+        if (complete) setForm(f => ({ ...f, status: 'completed' }));
       } else {
         const newId = await createDailyReport(data);
         setReportId(newId);
@@ -119,7 +121,7 @@ export default function DailyReportForm() {
   };
 
   const handlePdf = async () => {
-    if (!reportId) return;
+    if (!reportId || !report) return;
     const [proj, employees_, machines_, company_] = await Promise.all([
       db.projects.get(form.projectId),
       db.employees.toArray(),
@@ -128,7 +130,7 @@ export default function DailyReportForm() {
     ]);
     if (!proj) return;
     const pdf = generateDailyReportPdf({
-      report: report!,
+      report,
       project: proj,
       timeEntries: timeEntries || [],
       materialEntries: materialEntries || [],
@@ -147,17 +149,21 @@ export default function DailyReportForm() {
   const machineOptions = machines?.map(m => ({ value: m.id, label: m.name })) || [];
   const materialOptions = materials?.map(m => ({ value: m.id, label: m.name })) || [];
 
+  const subCount = subcontractorEntries?.length ?? 0;
+
   const tabs = [
     { id: 'info', label: 'Info', icon: <FileText size={14} /> },
     { id: 'time', label: `Zeiten (${timeEntries?.length ?? 0})`, icon: <Clock size={14} /> },
     { id: 'material', label: `Material (${materialEntries?.length ?? 0})`, icon: <Package size={14} /> },
     { id: 'machine', label: `Maschinen (${machineEntries?.length ?? 0})`, icon: <Truck size={14} /> },
+    { id: 'subcontractor', label: `Fremd${subCount > 0 ? ` (${subCount})` : ''}`, icon: <Users size={14} /> },
     { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
   ];
 
   const totalHours = timeEntries?.reduce((s, e) => s + e.totalHours, 0) ?? 0;
   const totalMaterialCost = materialEntries?.reduce((s, e) => s + e.total, 0) ?? 0;
   const totalMachineCost = machineEntries?.reduce((s, e) => s + e.total, 0) ?? 0;
+  const totalSubCost = subcontractorEntries?.reduce((s, e) => s + e.amount, 0) ?? 0;
 
   return (
     <div className="flex flex-col">
@@ -189,7 +195,6 @@ export default function DailyReportForm() {
         )}
         {activeTab === 'time' && (
           <TimeTab
-            reportId={reportId}
             entries={timeEntries || []}
             employeeOptions={employeeOptions}
             onEnsureReport={ensureReport}
@@ -198,16 +203,15 @@ export default function DailyReportForm() {
         )}
         {activeTab === 'material' && (
           <MaterialTab
-            reportId={reportId}
             entries={materialEntries || []}
             materialOptions={materialOptions}
+            materials={materials || []}
             onEnsureReport={ensureReport}
             totalCost={totalMaterialCost}
           />
         )}
         {activeTab === 'machine' && (
           <MachineTab
-            reportId={reportId}
             entries={machineEntries || []}
             machineOptions={machineOptions}
             employeeOptions={employeeOptions}
@@ -216,9 +220,15 @@ export default function DailyReportForm() {
             totalCost={totalMachineCost}
           />
         )}
+        {activeTab === 'subcontractor' && (
+          <SubcontractorTab
+            entries={subcontractorEntries || []}
+            onEnsureReport={ensureReport}
+            totalCost={totalSubCost}
+          />
+        )}
         {activeTab === 'photos' && (
           <PhotosTab
-            reportId={reportId}
             photos={photos || []}
             onEnsureReport={ensureReport}
           />
@@ -237,7 +247,7 @@ export default function DailyReportForm() {
             <Check size={18} /> Rapport abschliessen
           </Button>
         )}
-        {form.status === 'completed' && (
+        {(form.status as string) === 'completed' && (
           <div className="flex justify-center">
             <Badge variant="success" className="text-sm py-2 px-4">✓ Rapport abgeschlossen</Badge>
           </div>
@@ -247,7 +257,7 @@ export default function DailyReportForm() {
   );
 }
 
-// ---- Sub-components ----
+// ---- InfoTab ----
 
 interface InfoTabProps {
   form: { projectId: string; date: string; title: string; weather: string; temperature: string; notes: string };
@@ -290,8 +300,9 @@ function InfoTab({ form, set, projectOptions }: InfoTabProps) {
   );
 }
 
+// ---- TimeTab ----
+
 interface TimeTabProps {
-  reportId?: string;
   entries: unknown[];
   employeeOptions: { value: string; label: string }[];
   onEnsureReport: () => Promise<string>;
@@ -341,7 +352,7 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
         </div>
       )}
 
-      {(entries as typeof entries & any[]).map((entry: any) => (
+      {(entries as any[]).map((entry: any) => (
         <TimeEntryCard key={entry.id} entry={entry} employeeOptions={employeeOptions} />
       ))}
 
@@ -360,6 +371,7 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
             </div>
           )}
           <Input label="Tätigkeit" value={form.activity} onChange={set('activity')} placeholder="z.B. Mauerwerk, Schalung…" />
+          <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Interne Bemerkung" />
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Speichern</Button>
             <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
@@ -372,6 +384,10 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
           <Plus size={16} /> Zeiteintrag hinzufügen
         </Button>
       )}
+
+      {entries.length === 0 && !adding && (
+        <p className="text-center text-sm text-gray-400 py-4">Noch keine Zeiteinträge</p>
+      )}
     </div>
   );
 }
@@ -383,6 +399,7 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions
     endTime: entry.endTime || '',
     breakMinutes: entry.breakMinutes?.toString() || '0',
     activity: entry.activity || '',
+    note: entry.note || '',
   });
 
   const employeeName = employeeOptions.find(e => e.value === entry.employeeId)?.label || entry.employeeId;
@@ -402,6 +419,7 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions
             {entry.startTime} – {entry.endTime} · Pause: {entry.breakMinutes} min
           </div>
           {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
+          {entry.note && <div className="text-xs text-gray-400 italic">{entry.note}</div>}
         </div>
         <div className="flex items-center gap-2">
           <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
@@ -418,9 +436,13 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions
           <div className="grid grid-cols-3 gap-2">
             <Input label="Von" type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} />
             <Input label="Bis" type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} />
-            <Input label="Pause" type="number" value={form.breakMinutes} onChange={e => setForm(f => ({ ...f, breakMinutes: e.target.value }))} />
+            <Input label="Pause (min)" type="number" value={form.breakMinutes} onChange={e => setForm(f => ({ ...f, breakMinutes: e.target.value }))} />
+          </div>
+          <div className="text-sm bg-white rounded-lg px-3 py-2 border border-gray-200">
+            Total: <strong>{formatHours(calcTotalHours(form.startTime, form.endTime, Number(form.breakMinutes)))}</strong>
           </div>
           <Input label="Tätigkeit" value={form.activity} onChange={e => setForm(f => ({ ...f, activity: e.target.value }))} />
+          <Input label="Notiz" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
           <Button size="sm" onClick={handleSave}><Check size={14} /> Speichern</Button>
         </div>
       )}
@@ -428,17 +450,18 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions
   );
 }
 
-function MaterialTab({ entries, materialOptions, onEnsureReport, totalCost }: any) {
+// ---- MaterialTab ----
+
+function MaterialTab({ entries, materialOptions, materials, onEnsureReport, totalCost }: any) {
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0' });
+  const [form, setForm] = useState({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0', note: '' });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleMaterialSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const mat = materialOptions.find((m: any) => m.value === e.target.value);
+    const mat = materials.find((m: any) => m.id === e.target.value);
     if (mat) {
-      // We'd need the full material object here, but for now just set the id
-      setForm(f => ({ ...f, materialId: e.target.value, description: mat.label }));
+      setForm(f => ({ ...f, materialId: e.target.value, description: mat.name, unit: mat.unit, unitPrice: mat.unitPrice.toString() }));
     }
   };
 
@@ -456,9 +479,10 @@ function MaterialTab({ entries, materialOptions, onEnsureReport, totalCost }: an
       unit: form.unit,
       unitPrice: price,
       total: qty * price,
+      note: form.note || undefined,
     });
     setAdding(false);
-    setForm({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0' });
+    setForm({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0', note: '' });
   };
 
   return (
@@ -471,12 +495,13 @@ function MaterialTab({ entries, materialOptions, onEnsureReport, totalCost }: an
       )}
       {entries.map((entry: any) => (
         <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex justify-between items-start">
-          <div>
+          <div className="flex-1 min-w-0 pr-3">
             <div className="font-medium text-sm text-gray-900">{entry.description}</div>
             <div className="text-xs text-gray-500">{entry.quantity} {entry.unit} × {formatCurrency(entry.unitPrice)}</div>
+            {entry.note && <div className="text-xs text-gray-400 italic">{entry.note}</div>}
           </div>
           <div className="flex items-center gap-2">
-            <span className="font-bold text-sm">{formatCurrency(entry.total)}</span>
+            <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(entry.total)}</span>
             <button onClick={() => deleteMaterialEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
               <Trash2 size={14} />
             </button>
@@ -487,7 +512,7 @@ function MaterialTab({ entries, materialOptions, onEnsureReport, totalCost }: an
         <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Material hinzufügen</h4>
           {materialOptions.length > 0 && (
-            <Select label="Aus Stammdaten" options={materialOptions} placeholder="Wählen…" onChange={handleMaterialSelect} value={form.materialId} />
+            <Select label="Aus Stammdaten" options={materialOptions} placeholder="Wählen oder manuell eingeben…" onChange={handleMaterialSelect} value={form.materialId} />
           )}
           <Input label="Bezeichnung *" value={form.description} onChange={set('description')} placeholder="z.B. Kies 0-32" />
           <div className="grid grid-cols-3 gap-2">
@@ -498,6 +523,7 @@ function MaterialTab({ entries, materialOptions, onEnsureReport, totalCost }: an
           <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
             Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
           </div>
+          <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Optional" />
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Speichern</Button>
             <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
@@ -509,13 +535,18 @@ function MaterialTab({ entries, materialOptions, onEnsureReport, totalCost }: an
           <Plus size={16} /> Material hinzufügen
         </Button>
       )}
+      {entries.length === 0 && !adding && (
+        <p className="text-center text-sm text-gray-400 py-4">Kein Materialverbrauch erfasst</p>
+      )}
     </div>
   );
 }
 
+// ---- MachineTab ----
+
 function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsureReport, totalCost }: any) {
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ machineId: '', description: '', hours: '1', operatorId: '', hourlyRate: '0' });
+  const [form, setForm] = useState({ machineId: '', description: '', hours: '1', operatorId: '', hourlyRate: '0', note: '' });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -540,9 +571,10 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
       operatorId: form.operatorId || undefined,
       hourlyRate: rate,
       total: hrs * rate,
+      note: form.note || undefined,
     });
     setAdding(false);
-    setForm({ machineId: '', description: '', hours: '1', operatorId: '', hourlyRate: '0' });
+    setForm({ machineId: '', description: '', hours: '1', operatorId: '', hourlyRate: '0', note: '' });
   };
 
   return (
@@ -553,32 +585,38 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
           <span className="font-bold text-yellow-800">{formatCurrency(totalCost)}</span>
         </div>
       )}
-      {entries.map((entry: any) => (
-        <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex justify-between items-start">
-          <div>
-            <div className="font-medium text-sm text-gray-900">{entry.description}</div>
-            <div className="text-xs text-gray-500">{entry.hours}h × {formatCurrency(entry.hourlyRate)}/h</div>
+      {entries.map((entry: any) => {
+        const opName = employeeOptions.find((e: any) => e.value === entry.operatorId)?.label;
+        return (
+          <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex justify-between items-start">
+            <div className="flex-1 min-w-0 pr-3">
+              <div className="font-medium text-sm text-gray-900">{entry.description}</div>
+              <div className="text-xs text-gray-500">{entry.hours}h × {formatCurrency(entry.hourlyRate)}/h</div>
+              {opName && <div className="text-xs text-gray-400">Fahrer: {opName}</div>}
+              {entry.note && <div className="text-xs text-gray-400 italic">{entry.note}</div>}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(entry.total)}</span>
+              <button onClick={() => deleteMachineEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+                <Trash2 size={14} />
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-sm">{formatCurrency(entry.total)}</span>
-            <button onClick={() => deleteMachineEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
-              <Trash2 size={14} />
-            </button>
-          </div>
-        </div>
-      ))}
+        );
+      })}
       {adding && (
         <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Maschine / Fahrzeug hinzufügen</h4>
           {machineOptions.length > 0 && (
-            <Select label="Aus Stammdaten" options={machineOptions} placeholder="Wählen…" onChange={handleMachineSelect} value={form.machineId} />
+            <Select label="Aus Stammdaten" options={machineOptions} placeholder="Wählen oder manuell eingeben…" onChange={handleMachineSelect} value={form.machineId} />
           )}
-          <Input label="Bezeichnung *" value={form.description} onChange={set('description')} />
+          <Input label="Bezeichnung *" value={form.description} onChange={set('description')} placeholder="z.B. Bagger CAT 320" />
           <div className="grid grid-cols-2 gap-2">
             <Input label="Stunden" type="number" value={form.hours} onChange={set('hours')} />
             <Input label="Satz (CHF/h)" type="number" value={form.hourlyRate} onChange={set('hourlyRate')} />
           </div>
-          <Select label="Fahrer" options={employeeOptions} placeholder="Wählen…" value={form.operatorId} onChange={set('operatorId')} />
+          <Select label="Fahrer (optional)" options={employeeOptions} placeholder="Wählen…" value={form.operatorId} onChange={set('operatorId')} />
+          <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Optional" />
           <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
             Total: <strong>{formatCurrency(Number(form.hours) * Number(form.hourlyRate))}</strong>
           </div>
@@ -593,9 +631,125 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
           <Plus size={16} /> Maschine hinzufügen
         </Button>
       )}
+      {entries.length === 0 && !adding && (
+        <p className="text-center text-sm text-gray-400 py-4">Keine Maschinen erfasst</p>
+      )}
     </div>
   );
 }
+
+// ---- SubcontractorTab ----
+
+function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ company: '', description: '', amount: '', note: '' });
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleAdd = async () => {
+    if (!form.company || !form.amount) return;
+    const rId = await onEnsureReport();
+    await addSubcontractorEntry({
+      reportId: rId,
+      company: form.company,
+      description: form.description,
+      amount: Number(form.amount),
+      note: form.note || undefined,
+    });
+    setAdding(false);
+    setForm({ company: '', description: '', amount: '', note: '' });
+  };
+
+  return (
+    <div className="space-y-3">
+      {/* Info banner */}
+      <div className="bg-blue-50 rounded-xl px-4 py-2.5 text-xs text-blue-700">
+        Fremdleistungen sind Leistungen, die durch Drittfirmen erbracht wurden (Subunternehmer, Spezialisten, Transporte).
+      </div>
+
+      {totalCost > 0 && (
+        <div className="bg-purple-50 rounded-xl px-4 py-2 flex justify-between items-center">
+          <span className="text-sm text-purple-700 font-medium">Total Fremdleistungen</span>
+          <span className="font-bold text-purple-800">{formatCurrency(totalCost)}</span>
+        </div>
+      )}
+
+      {entries.map((entry: any) => (
+        <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+          <div className="flex justify-between items-start">
+            <div className="flex-1 min-w-0 pr-3">
+              <div className="font-semibold text-sm text-gray-900">{entry.company}</div>
+              <div className="text-sm text-gray-600 mt-0.5">{entry.description}</div>
+              {entry.note && <div className="text-xs text-gray-400 italic mt-0.5">{entry.note}</div>}
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="font-bold text-sm">{formatCurrency(entry.amount)}</span>
+              <button
+                onClick={() => deleteSubcontractorEntry(entry.id)}
+                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+              >
+                <Trash2 size={14} />
+              </button>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {adding && (
+        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+          <h4 className="font-semibold text-sm">Fremdleistung erfassen</h4>
+          <Input
+            label="Firma / Subunternehmer *"
+            value={form.company}
+            onChange={set('company')}
+            placeholder="z.B. Elektriker Muster AG"
+          />
+          <Input
+            label="Leistungsbeschreibung"
+            value={form.description}
+            onChange={set('description')}
+            placeholder="z.B. Elektroinstallation EG"
+          />
+          <Input
+            label="Betrag (CHF) *"
+            type="number"
+            value={form.amount}
+            onChange={set('amount')}
+            placeholder="0.00"
+          />
+          <div className="flex flex-col gap-1">
+            <label className="text-sm font-medium text-gray-700">Notiz</label>
+            <textarea
+              value={form.note}
+              onChange={set('note')}
+              rows={2}
+              placeholder="Rechnungsnummer, Bemerkungen…"
+              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleAdd} className="flex-1">
+              <Check size={14} /> Speichern
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
+          </div>
+        </div>
+      )}
+
+      {!adding && (
+        <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
+          <Plus size={16} /> Fremdleistung hinzufügen
+        </Button>
+      )}
+
+      {entries.length === 0 && !adding && (
+        <p className="text-center text-sm text-gray-400 py-4">Keine Fremdleistungen erfasst</p>
+      )}
+    </div>
+  );
+}
+
+// ---- PhotosTab ----
 
 function PhotosTab({ photos, onEnsureReport }: any) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -644,7 +798,7 @@ function PhotosTab({ photos, onEnsureReport }: any) {
 
       {photos.length === 0 && (
         <div className="text-center py-8 text-gray-400 text-sm">
-          Noch keine Fotos vorhanden
+          Noch keine Fotos vorhanden.<br />Kamera-Button verwenden.
         </div>
       )}
     </div>
@@ -660,7 +814,7 @@ function PhotoCard({ photo }: { photo: any }) {
   };
 
   return (
-    <div className="rounded-xl overflow-hidden border border-gray-200 bg-white">
+    <div className="rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
       <div className="relative">
         <img src={photo.dataUrl} alt="Foto" className="w-full aspect-video object-cover" />
         <button
@@ -676,7 +830,7 @@ function PhotoCard({ photo }: { photo: any }) {
         value={note}
         onChange={e => setNote(e.target.value)}
         onBlur={handleNoteBlur}
-        className="w-full px-2 py-1.5 text-xs border-0 focus:outline-none text-gray-600"
+        className="w-full px-3 py-2 text-xs border-0 border-t border-gray-100 focus:outline-none text-gray-600"
       />
     </div>
   );

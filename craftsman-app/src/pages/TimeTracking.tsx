@@ -1,18 +1,46 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Plus, Trash2, Clock } from 'lucide-react';
+import { Play, Square, Plus, Trash2, Clock, BarChart2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from 'date-fns';
+import { de } from 'date-fns/locale';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import Input from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
+import { Tabs } from '../components/ui/Tabs';
 import { useEmployees } from '../hooks/useMasterData';
 import { useProjects } from '../hooks/useProjects';
 import { db } from '../db';
-import { todayISO, formatHours, calcTotalHours, currentTime, cn } from '../utils';
+import { todayISO, formatHours, calcTotalHours, currentTime, formatDate, cn } from '../utils';
 import { v4 as uuidv4 } from 'uuid';
 
+const DAILY_TARGET_HOURS = 8.5;
+
 export default function TimeTracking() {
+  const [activeTab, setActiveTab] = useState('timer');
+  const tabs = [
+    { id: 'timer', label: 'Stoppuhr', icon: <Clock size={14} /> },
+    { id: 'week', label: 'Woche', icon: <BarChart2 size={14} /> },
+  ];
+
+  return (
+    <div>
+      <PageHeader title="Zeiterfassung" />
+      <div className="px-4 py-3">
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+      <div className="px-4 pb-8">
+        {activeTab === 'timer' && <TimerTab />}
+        {activeTab === 'week' && <WeekTab />}
+      </div>
+    </div>
+  );
+}
+
+// ---- Timer Tab ----
+
+function TimerTab() {
   const employees = useEmployees();
   const projects = useProjects();
   const [selectedEmployee, setSelectedEmployee] = useState('');
@@ -23,10 +51,9 @@ export default function TimeTracking() {
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startEpochRef = useRef<number>(0);
 
-  // Manual entry state
   const [showManual, setShowManual] = useState(false);
   const [manualForm, setManualForm] = useState({
-    employeeId: '', projectId: '', date: todayISO(),
+    employeeId: '', date: todayISO(),
     startTime: '07:00', endTime: '17:00', breakMinutes: '30', activity: '',
   });
 
@@ -53,6 +80,7 @@ export default function TimeTracking() {
     const endT = currentTime();
     const totalHours = calcTotalHours(startTime, endT, 0);
     if (totalHours > 0 && selectedEmployee) {
+      const projectTitle = projects?.find(p => p.id === selectedProject)?.title;
       await db.timeEntries.add({
         id: uuidv4(),
         reportId: `timer-${Date.now()}`,
@@ -63,7 +91,7 @@ export default function TimeTracking() {
         endTime: endT,
         breakMinutes: 0,
         totalHours,
-        activity: selectedProject ? `Projekt: ${projects?.find(p => p.id === selectedProject)?.title || ''}` : undefined,
+        activity: projectTitle ? `Projekt: ${projectTitle}` : undefined,
       });
     }
     setElapsed(0);
@@ -97,130 +125,313 @@ export default function TimeTracking() {
       activity: manualForm.activity || undefined,
     });
     setShowManual(false);
-    setManualForm({ employeeId: '', projectId: '', date: todayISO(), startTime: '07:00', endTime: '17:00', breakMinutes: '30', activity: '' });
+    setManualForm({ employeeId: '', date: todayISO(), startTime: '07:00', endTime: '17:00', breakMinutes: '30', activity: '' });
   };
 
   const employeeOptions = employees?.map(e => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })) || [];
   const projectOptions = projects?.map(p => ({ value: p.id, label: p.title })) || [];
-
   const todayTotal = todayEntries?.reduce((s, e) => s + e.totalHours, 0) ?? 0;
   const employeeMap = Object.fromEntries(employees?.map(e => [e.id, `${e.firstName} ${e.lastName}`]) || []);
 
   return (
-    <div>
-      <PageHeader title="Zeiterfassung" />
+    <div className="space-y-4">
+      {/* Timer */}
+      <Card>
+        <h3 className="font-semibold text-gray-900 mb-4">Stoppuhr</h3>
+        <div className="space-y-3">
+          <Select
+            label="Mitarbeiter"
+            value={selectedEmployee}
+            onChange={e => setSelectedEmployee(e.target.value)}
+            options={employeeOptions}
+            placeholder="Mitarbeiter wählen"
+          />
+          <Select
+            label="Projekt (optional)"
+            value={selectedProject}
+            onChange={e => setSelectedProject(e.target.value)}
+            options={projectOptions}
+            placeholder="Projekt wählen"
+          />
 
-      <div className="px-4 py-4 space-y-4">
-        {/* Timer */}
-        <Card>
-          <h3 className="font-semibold text-gray-900 mb-4">Stoppuhr</h3>
-          <div className="space-y-3">
-            <Select
-              label="Mitarbeiter"
-              value={selectedEmployee}
-              onChange={e => setSelectedEmployee(e.target.value)}
-              options={employeeOptions}
-              placeholder="Mitarbeiter wählen"
-            />
-            <Select
-              label="Projekt (optional)"
-              value={selectedProject}
-              onChange={e => setSelectedProject(e.target.value)}
-              options={projectOptions}
-              placeholder="Projekt wählen"
-            />
-
-            <div className="text-center py-4">
-              <div className={cn(
-                'text-5xl font-mono font-bold tabular-nums transition-colors',
-                running ? 'text-primary-600' : 'text-gray-300'
-              )}>
-                {formatElapsed(elapsed)}
-              </div>
-              {running && (
-                <div className="text-sm text-gray-500 mt-1">Gestartet: {startTime}</div>
-              )}
+          <div className="text-center py-4">
+            <div className={cn(
+              'text-5xl font-mono font-bold tabular-nums transition-colors',
+              running ? 'text-primary-600' : 'text-gray-300'
+            )}>
+              {formatElapsed(elapsed)}
             </div>
-
-            <div className="flex gap-3">
-              {!running ? (
-                <Button className="flex-1 h-14" onClick={startTimer} disabled={!selectedEmployee}>
-                  <Play size={20} /> Start
-                </Button>
-              ) : (
-                <Button variant="danger" className="flex-1 h-14" onClick={stopTimer}>
-                  <Square size={20} /> Stop & Speichern
-                </Button>
-              )}
-            </div>
+            {running && (
+              <div className="text-sm text-gray-500 mt-1">Gestartet: {startTime}</div>
+            )}
           </div>
-        </Card>
 
-        {/* Today's total */}
-        {todayTotal > 0 && (
-          <div className="bg-primary-50 rounded-2xl px-4 py-3 flex justify-between items-center">
+          {!running ? (
+            <Button className="w-full h-14" onClick={startTimer} disabled={!selectedEmployee}>
+              <Play size={20} /> Start
+            </Button>
+          ) : (
+            <Button variant="danger" className="w-full h-14" onClick={stopTimer}>
+              <Square size={20} /> Stop & Speichern
+            </Button>
+          )}
+        </div>
+      </Card>
+
+      {/* Today's summary */}
+      {todayTotal > 0 && (
+        <div className="bg-primary-50 rounded-2xl px-4 py-3">
+          <div className="flex justify-between items-center mb-2">
             <div className="flex items-center gap-2 text-primary-700">
               <Clock size={16} />
               <span className="text-sm font-medium">Total heute</span>
             </div>
             <span className="font-bold text-primary-900">{formatHours(todayTotal)}</span>
           </div>
-        )}
+          <div className="w-full bg-primary-200 rounded-full h-1.5">
+            <div
+              className="bg-primary-600 h-1.5 rounded-full transition-all"
+              style={{ width: `${Math.min(100, (todayTotal / DAILY_TARGET_HOURS) * 100)}%` }}
+            />
+          </div>
+          <div className="text-xs text-primary-600 mt-1">
+            Soll: {formatHours(DAILY_TARGET_HOURS)} · {todayTotal >= DAILY_TARGET_HOURS ? '✓ Erreicht' : `Noch ${formatHours(Math.max(0, DAILY_TARGET_HOURS - todayTotal))}`}
+          </div>
+        </div>
+      )}
 
-        {/* Today's entries */}
-        {(todayEntries?.length ?? 0) > 0 && (
-          <Card padding="none">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h3 className="font-semibold text-sm text-gray-900">Heutige Einträge</h3>
-            </div>
-            {todayEntries?.map(entry => (
-              <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
-                <div>
-                  <div className="text-sm font-medium text-gray-900">{employeeMap[entry.employeeId] || entry.employeeId}</div>
-                  <div className="text-xs text-gray-500">{entry.startTime} – {entry.endTime}</div>
-                  {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
-                  <button onClick={() => db.timeEntries.delete(entry.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
+      {/* Today's entries */}
+      {(todayEntries?.length ?? 0) > 0 && (
+        <Card padding="none">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h3 className="font-semibold text-sm text-gray-900">Heutige Einträge</h3>
+          </div>
+          {todayEntries?.map(entry => (
+            <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
+              <div>
+                <div className="text-sm font-medium text-gray-900">{employeeMap[entry.employeeId] || entry.employeeId}</div>
+                <div className="text-xs text-gray-500">{entry.startTime} – {entry.endTime} · Pause: {entry.breakMinutes} min</div>
+                {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
               </div>
-            ))}
-          </Card>
-        )}
-
-        {/* Manual entry */}
-        {showManual ? (
-          <Card>
-            <h3 className="font-semibold text-sm text-gray-900 mb-3">Manuelle Erfassung</h3>
-            <div className="space-y-3">
-              <Select label="Mitarbeiter" value={manualForm.employeeId} onChange={e => setManualForm(f => ({ ...f, employeeId: e.target.value }))} options={employeeOptions} placeholder="Wählen…" />
-              <Input label="Datum" type="date" value={manualForm.date} onChange={e => setManualForm(f => ({ ...f, date: e.target.value }))} />
-              <div className="grid grid-cols-3 gap-2">
-                <Input label="Von" type="time" value={manualForm.startTime} onChange={e => setManualForm(f => ({ ...f, startTime: e.target.value }))} />
-                <Input label="Bis" type="time" value={manualForm.endTime} onChange={e => setManualForm(f => ({ ...f, endTime: e.target.value }))} />
-                <Input label="Pause" type="number" value={manualForm.breakMinutes} onChange={e => setManualForm(f => ({ ...f, breakMinutes: e.target.value }))} />
-              </div>
-              <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
-                Total: <strong>{formatHours(calcTotalHours(manualForm.startTime, manualForm.endTime, Number(manualForm.breakMinutes)))}</strong>
-              </div>
-              <Input label="Tätigkeit" value={manualForm.activity} onChange={e => setManualForm(f => ({ ...f, activity: e.target.value }))} placeholder="z.B. Mauerwerk" />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleManualAdd} className="flex-1">Speichern</Button>
-                <Button size="sm" variant="ghost" onClick={() => setShowManual(false)}>Abbrechen</Button>
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
+                <button onClick={() => db.timeEntries.delete(entry.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg">
+                  <Trash2 size={14} />
+                </button>
               </div>
             </div>
-          </Card>
-        ) : (
-          <Button variant="outline" className="w-full" onClick={() => setShowManual(true)}>
-            <Plus size={16} /> Manuell erfassen
-          </Button>
-        )}
+          ))}
+        </Card>
+      )}
 
-        <div className="h-4" />
+      {/* Manual entry */}
+      {showManual ? (
+        <Card>
+          <h3 className="font-semibold text-sm text-gray-900 mb-3">Manuelle Erfassung</h3>
+          <div className="space-y-3">
+            <Select label="Mitarbeiter" value={manualForm.employeeId} onChange={e => setManualForm(f => ({ ...f, employeeId: e.target.value }))} options={employeeOptions} placeholder="Wählen…" />
+            <Input label="Datum" type="date" value={manualForm.date} onChange={e => setManualForm(f => ({ ...f, date: e.target.value }))} />
+            <div className="grid grid-cols-3 gap-2">
+              <Input label="Von" type="time" value={manualForm.startTime} onChange={e => setManualForm(f => ({ ...f, startTime: e.target.value }))} />
+              <Input label="Bis" type="time" value={manualForm.endTime} onChange={e => setManualForm(f => ({ ...f, endTime: e.target.value }))} />
+              <Input label="Pause" type="number" value={manualForm.breakMinutes} onChange={e => setManualForm(f => ({ ...f, breakMinutes: e.target.value }))} />
+            </div>
+            <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+              Total: <strong>{formatHours(calcTotalHours(manualForm.startTime, manualForm.endTime, Number(manualForm.breakMinutes)))}</strong>
+            </div>
+            <Input label="Tätigkeit" value={manualForm.activity} onChange={e => setManualForm(f => ({ ...f, activity: e.target.value }))} placeholder="z.B. Mauerwerk" />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={handleManualAdd} className="flex-1">Speichern</Button>
+              <Button size="sm" variant="ghost" onClick={() => setShowManual(false)}>Abbrechen</Button>
+            </div>
+          </div>
+        </Card>
+      ) : (
+        <Button variant="outline" className="w-full" onClick={() => setShowManual(true)}>
+          <Plus size={16} /> Manuell erfassen
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ---- Week Tab ----
+
+function WeekTab() {
+  const employees = useEmployees();
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedEmployee, setSelectedEmployee] = useState('');
+
+  const refDate = addWeeks(new Date(), weekOffset);
+  const weekStart = startOfWeek(refDate, { weekStartsOn: 1 });
+  const weekEnd = endOfWeek(refDate, { weekStartsOn: 1 });
+  const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+  const weekEntries = useLiveQuery(async () => {
+    const from = format(weekStart, 'yyyy-MM-dd');
+    const to = format(weekEnd, 'yyyy-MM-dd');
+    return db.timeEntries
+      .where('date').between(from, to, true, true)
+      .toArray();
+  }, [weekOffset]);
+
+  const employeeOptions = employees?.map(e => ({ value: e.id, label: `${e.firstName} ${e.lastName}` })) || [];
+  const employeeMap = Object.fromEntries(employees?.map(e => [e.id, `${e.firstName} ${e.lastName}`]) || []);
+
+  const filteredEntries = weekEntries?.filter(e =>
+    !selectedEmployee || e.employeeId === selectedEmployee
+  ) || [];
+
+  const weekTotal = filteredEntries.reduce((s, e) => s + e.totalHours, 0);
+  const weekTarget = 5 * DAILY_TARGET_HOURS;
+  const weekDiff = weekTotal - weekTarget;
+
+  const entriesByDay = days.map(day => {
+    const dayStr = format(day, 'yyyy-MM-dd');
+    const dayEntries = filteredEntries.filter(e => e.date === dayStr);
+    const dayTotal = dayEntries.reduce((s, e) => s + e.totalHours, 0);
+    return { day, dayStr, dayEntries, dayTotal };
+  });
+
+  const isCurrentWeek = weekOffset === 0;
+
+  return (
+    <div className="space-y-4">
+      {/* Week navigation */}
+      <div className="flex items-center justify-between">
+        <button
+          onClick={() => setWeekOffset(o => o - 1)}
+          className="p-2 rounded-xl hover:bg-gray-100"
+        >
+          <ChevronLeft size={20} />
+        </button>
+        <div className="text-center">
+          <div className="font-semibold text-gray-900 text-sm">
+            {isCurrentWeek ? 'Diese Woche' : format(weekStart, "'KW' w", { locale: de })}
+          </div>
+          <div className="text-xs text-gray-500">
+            {format(weekStart, 'dd.MM', { locale: de })} – {format(weekEnd, 'dd.MM.yyyy', { locale: de })}
+          </div>
+        </div>
+        <button
+          onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
+          disabled={weekOffset === 0}
+          className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-30"
+        >
+          <ChevronRight size={20} />
+        </button>
       </div>
+
+      {/* Employee filter */}
+      <Select
+        label="Mitarbeiter"
+        value={selectedEmployee}
+        onChange={e => setSelectedEmployee(e.target.value)}
+        options={employeeOptions}
+        placeholder="Alle Mitarbeiter"
+      />
+
+      {/* Wochentotal + Soll/Ist */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div className="flex justify-between items-start mb-3">
+          <div>
+            <div className="text-sm text-gray-500">Ist / Soll</div>
+            <div className="text-2xl font-bold text-gray-900">
+              {formatHours(weekTotal)}
+              <span className="text-sm text-gray-400 font-normal"> / {formatHours(weekTarget)}</span>
+            </div>
+          </div>
+          <div className={cn(
+            'text-sm font-bold px-3 py-1 rounded-full',
+            weekDiff >= 0 ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+          )}>
+            {weekDiff >= 0 ? '+' : ''}{formatHours(Math.abs(weekDiff))}
+          </div>
+        </div>
+        <div className="w-full bg-gray-100 rounded-full h-2">
+          <div
+            className={cn('h-2 rounded-full transition-all', weekTotal >= weekTarget ? 'bg-green-500' : 'bg-primary-500')}
+            style={{ width: `${Math.min(100, (weekTotal / weekTarget) * 100)}%` }}
+          />
+        </div>
+      </div>
+
+      {/* Daily bars */}
+      <Card>
+        <h3 className="font-semibold text-sm text-gray-700 mb-3">Tagesübersicht</h3>
+        <div className="space-y-2">
+          {entriesByDay.map(({ day, dayStr, dayTotal }) => {
+            const isToday = dayStr === todayISO();
+            const pct = Math.min(100, (dayTotal / DAILY_TARGET_HOURS) * 100);
+            const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+            return (
+              <div key={dayStr} className={cn('flex items-center gap-3', isWeekend && 'opacity-50')}>
+                <div className={cn('w-8 text-right text-xs font-medium flex-shrink-0', isToday ? 'text-primary-600' : 'text-gray-500')}>
+                  {format(day, 'EE', { locale: de })}
+                </div>
+                <div className="flex-1">
+                  <div className="w-full bg-gray-100 rounded-full h-5 relative overflow-hidden">
+                    <div
+                      className={cn(
+                        'h-5 rounded-full transition-all flex items-center justify-end pr-2',
+                        dayTotal >= DAILY_TARGET_HOURS ? 'bg-green-400' : dayTotal > 0 ? 'bg-primary-400' : 'bg-transparent'
+                      )}
+                      style={{ width: `${pct}%`, minWidth: dayTotal > 0 ? '2rem' : '0' }}
+                    />
+                    {isToday && (
+                      <div className="absolute inset-0 border-2 border-primary-400 rounded-full pointer-events-none" />
+                    )}
+                  </div>
+                </div>
+                <div className={cn('w-12 text-right text-xs font-bold flex-shrink-0', dayTotal > 0 ? 'text-gray-900' : 'text-gray-300')}>
+                  {dayTotal > 0 ? formatHours(dayTotal) : '—'}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Card>
+
+      {/* Entry list */}
+      {filteredEntries.length > 0 && (
+        <Card padding="none">
+          <div className="px-4 py-3 border-b border-gray-100">
+            <h3 className="font-semibold text-sm text-gray-900">Alle Einträge</h3>
+          </div>
+          {entriesByDay.map(({ dayStr, dayEntries, dayTotal }) => {
+            if (dayEntries.length === 0) return null;
+            return (
+              <div key={dayStr}>
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex justify-between">
+                  <span className="text-xs font-semibold text-gray-600">{formatDate(dayStr)}</span>
+                  <span className="text-xs font-bold text-gray-700">{formatHours(dayTotal)}</span>
+                </div>
+                {dayEntries.map(entry => (
+                  <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
+                    <div>
+                      <div className="text-sm font-medium text-gray-900">{employeeMap[entry.employeeId] || '—'}</div>
+                      <div className="text-xs text-gray-500">{entry.startTime} – {entry.endTime}</div>
+                      {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
+                      <button onClick={() => db.timeEntries.delete(entry.id)} className="p-1.5 text-red-400 hover:bg-red-50 rounded-lg">
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </Card>
+      )}
+
+      {filteredEntries.length === 0 && (
+        <div className="text-center py-8 text-gray-400 text-sm">
+          Keine Zeiteinträge für diese Woche.
+        </div>
+      )}
     </div>
   );
 }
