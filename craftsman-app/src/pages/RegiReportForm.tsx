@@ -1,0 +1,418 @@
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import SignatureCanvas from 'react-signature-canvas';
+import { Check, Plus, Trash2, Download, PenTool, X } from 'lucide-react';
+import PageHeader from '../components/layout/PageHeader';
+import Button from '../components/ui/Button';
+import Input from '../components/ui/Input';
+import Select from '../components/ui/Select';
+import Textarea from '../components/ui/Textarea';
+import { Tabs } from '../components/ui/Tabs';
+import Badge from '../components/ui/Badge';
+import Modal from '../components/ui/Modal';
+import {
+  useRegiReport, useRegiPositions,
+  createRegiReport, updateRegiReport, signRegiReport,
+  addRegiPosition, deleteRegiPosition,
+} from '../hooks/useRegiReports';
+import { useProjects } from '../hooks/useProjects';
+import { useCompany } from '../hooks/useMasterData';
+import { todayISO, formatCurrency, UNITS } from '../utils';
+import { generateRegiReportPdf } from '../pdf/regiReportPdf';
+import { db } from '../db';
+
+const POSITION_TYPES = [
+  { value: 'labor', label: 'Arbeit' },
+  { value: 'material', label: 'Material' },
+  { value: 'machine', label: 'Maschinen' },
+  { value: 'extra', label: 'Zusatzkosten' },
+];
+
+const DEFAULT_CONDITIONS = `Arbeitsstunden: CHF 75.00/h
+Material: gemäss Aufwand + 15% Aufschlag
+Maschinen: gemäss effektivem Einsatz
+Minimum: 1 Stunde`;
+
+export default function RegiReportForm() {
+  const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const isEdit = !!id;
+
+  const report = useRegiReport(id);
+  const positions = useRegiPositions(id);
+  const projects = useProjects();
+  useCompany(); // loaded for PDF generation
+
+  const [activeTab, setActiveTab] = useState('info');
+  const [saving, setSaving] = useState(false);
+  const [reportId, setReportId] = useState(id);
+  const [sigModalOpen, setSigModalOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const sigRef = useRef<SignatureCanvas>(null);
+
+  const [form, setForm] = useState({
+    projectId: searchParams.get('projectId') || '',
+    date: todayISO(),
+    title: `Regierapport ${todayISO()}`,
+    laborConditions: DEFAULT_CONDITIONS,
+    vatRate: '8.1',
+  });
+
+  useEffect(() => {
+    if (report) {
+      setForm({
+        projectId: report.projectId,
+        date: report.date,
+        title: report.title,
+        laborConditions: report.laborConditions || DEFAULT_CONDITIONS,
+        vatRate: report.vatRate?.toString() || '8.1',
+      });
+      setCustomerName(report.customerName || '');
+    }
+  }, [report]);
+
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const ensureReport = async (): Promise<string> => {
+    if (reportId) return reportId;
+    const newId = await createRegiReport({
+      projectId: form.projectId,
+      date: form.date,
+      title: form.title,
+      laborConditions: form.laborConditions,
+      vatRate: Number(form.vatRate),
+      status: 'draft',
+    });
+    setReportId(newId);
+    navigate(`/regierapport/${newId}`, { replace: true });
+    return newId;
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const data = {
+        projectId: form.projectId,
+        date: form.date,
+        title: form.title,
+        laborConditions: form.laborConditions,
+        vatRate: Number(form.vatRate),
+      };
+      if (reportId) {
+        await updateRegiReport(reportId, data);
+      } else {
+        const newId = await createRegiReport({ ...data, status: 'draft' });
+        setReportId(newId);
+        navigate(`/regierapport/${newId}`, { replace: true });
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleSign = async () => {
+    if (!reportId || !sigRef.current) return;
+    if (sigRef.current.isEmpty()) {
+      alert('Bitte unterschreiben Sie zuerst.');
+      return;
+    }
+    const sigDataUrl = sigRef.current.toDataURL('image/png');
+    await signRegiReport(reportId, customerName, sigDataUrl);
+    setSigModalOpen(false);
+  };
+
+  const handlePdf = async () => {
+    if (!reportId || !report) return;
+    const [proj, company_] = await Promise.all([
+      db.projects.get(form.projectId),
+      db.company.toCollection().first(),
+    ]);
+    if (!proj) return;
+    const pdf = generateRegiReportPdf({
+      report,
+      project: proj,
+      positions: positions || [],
+      company: company_ || null,
+    });
+    pdf.save(`Regierapport_${form.date}.pdf`);
+  };
+
+  const projectOptions = projects?.map(p => ({ value: p.id, label: p.title })) || [];
+
+  // Totals
+  const positionsByType: Record<string, typeof positions> = {
+    labor: positions?.filter(p => p.type === 'labor') || [],
+    material: positions?.filter(p => p.type === 'material') || [],
+    machine: positions?.filter(p => p.type === 'machine') || [],
+    extra: positions?.filter(p => p.type === 'extra') || [],
+  };
+  const netTotal = positions?.reduce((s, p) => s + p.total, 0) ?? 0;
+  const vatAmount = netTotal * (Number(form.vatRate) / 100);
+  const grossTotal = netTotal + vatAmount;
+
+  const tabs = [
+    { id: 'info', label: 'Info' },
+    { id: 'positions', label: `Positionen (${positions?.length ?? 0})` },
+    { id: 'summary', label: 'Abschluss' },
+  ];
+
+  return (
+    <div>
+      <PageHeader
+        title={isEdit ? 'Regierapport' : 'Neuer Regierapport'}
+        subtitle={form.title}
+        backTo={form.projectId ? `/projects/${form.projectId}` : '/'}
+        action={
+          <div className="flex gap-2">
+            {reportId && (
+              <Button variant="ghost" size="sm" onClick={handlePdf}>
+                <Download size={16} />
+              </Button>
+            )}
+            <Button size="sm" loading={saving} onClick={handleSave}>
+              <Check size={16} /> Speichern
+            </Button>
+          </div>
+        }
+      />
+
+      <div className="px-4 py-3">
+        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+      </div>
+
+      <div className="px-4 pb-24 space-y-4">
+        {activeTab === 'info' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+              <Select label="Projekt *" value={form.projectId} onChange={set('projectId')} options={projectOptions} placeholder="Projekt wählen…" />
+              <Input label="Datum" type="date" value={form.date} onChange={set('date')} />
+              <Input label="Titel" value={form.title} onChange={set('title')} />
+              <Input label="MWST %" type="number" value={form.vatRate} onChange={set('vatRate')} />
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700">Regiekonditionen</h3>
+              <Textarea
+                value={form.laborConditions}
+                onChange={set('laborConditions')}
+                rows={6}
+                placeholder="Stundensätze, Materialaufschlag, Bedingungen…"
+              />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'positions' && (
+          <PositionsTab
+            reportId={reportId}
+            positions={positions || []}
+            onEnsureReport={ensureReport}
+          />
+        )}
+
+        {activeTab === 'summary' && (
+          <div className="space-y-4">
+            {/* Totals summary */}
+            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
+                <h3 className="font-semibold text-sm text-gray-700">Zusammenfassung</h3>
+              </div>
+              {Object.entries(positionsByType).map(([type, pos]) => {
+                const typeLabels: Record<string, string> = { labor: 'Arbeit', material: 'Material', machine: 'Maschinen', extra: 'Zusatz' };
+                const subtotal = (pos as any[])?.reduce((s: number, p: any) => s + p.total, 0) ?? 0;
+                if (!pos || (pos as any[]).length === 0) return null;
+                return (
+                  <div key={type} className="px-4 py-2.5 flex justify-between border-b border-gray-50">
+                    <span className="text-sm text-gray-600">{typeLabels[type]}</span>
+                    <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
+                  </div>
+                );
+              })}
+              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100">
+                <span className="text-sm font-semibold text-gray-800">Nettototal</span>
+                <span className="text-sm font-semibold">{formatCurrency(netTotal)}</span>
+              </div>
+              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100">
+                <span className="text-sm text-gray-600">MWST {form.vatRate}%</span>
+                <span className="text-sm">{formatCurrency(vatAmount)}</span>
+              </div>
+              <div className="px-4 py-3 flex justify-between bg-primary-50">
+                <span className="font-bold text-primary-900">Gesamttotal</span>
+                <span className="font-bold text-xl text-primary-900">{formatCurrency(grossTotal)}</span>
+              </div>
+            </div>
+
+            {/* Signature */}
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700">Kundenbestätigung</h3>
+              {report?.customerSignature ? (
+                <div className="space-y-2">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <img
+                      src={report.customerSignature}
+                      alt="Unterschrift"
+                      className="max-h-20 w-auto"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Unterzeichnet von <strong>{report.customerName}</strong>
+                  </p>
+                  <Badge variant="success">Signiert</Badge>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <Input
+                    label="Name Kunde"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    placeholder="Vor- und Nachname"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => { ensureReport(); setSigModalOpen(true); }}
+                  >
+                    <PenTool size={16} /> Kundenunterschrift einholen
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            <Button variant="outline" className="w-full" onClick={handlePdf}>
+              <Download size={16} /> PDF erstellen & speichern
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Signature Modal */}
+      <Modal open={sigModalOpen} onClose={() => setSigModalOpen(false)} title="Kundenunterschrift" size="lg">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Ich bestätige die korrekte Ausführung der aufgeführten Arbeiten und Leistungen.
+          </p>
+          <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50">
+            <SignatureCanvas
+              ref={sigRef}
+              canvasProps={{
+                width: 500,
+                height: 200,
+                className: 'w-full touch-none',
+                style: { touchAction: 'none' },
+              }}
+              backgroundColor="transparent"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => sigRef.current?.clear()}
+            >
+              <X size={14} /> Löschen
+            </Button>
+            <Button className="flex-1" onClick={handleSign}>
+              <Check size={16} /> Bestätigen & speichern
+            </Button>
+          </div>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
+function PositionsTab({ positions, onEnsureReport }: { reportId?: string; positions: any[]; onEnsureReport: () => Promise<string> }) {
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({
+    type: 'labor',
+    description: '',
+    quantity: '1',
+    unit: 'h',
+    unitPrice: '75',
+  });
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleAdd = async () => {
+    if (!form.description) return;
+    const rId = await onEnsureReport();
+    const qty = Number(form.quantity);
+    const price = Number(form.unitPrice);
+    await addRegiPosition({
+      regiReportId: rId,
+      type: form.type as any,
+      description: form.description,
+      quantity: qty,
+      unit: form.unit,
+      unitPrice: price,
+      total: qty * price,
+      sortOrder: positions.length,
+    });
+    setAdding(false);
+    setForm({ type: 'labor', description: '', quantity: '1', unit: 'h', unitPrice: '75' });
+  };
+
+  const typeGroups = POSITION_TYPES.map(t => ({
+    ...t,
+    items: positions.filter(p => p.type === t.value),
+  }));
+
+  return (
+    <div className="space-y-3">
+      {typeGroups.map(group => {
+        if (group.items.length === 0) return null;
+        const subtotal = group.items.reduce((s: number, p: any) => s + p.total, 0);
+        return (
+          <div key={group.value} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex justify-between">
+              <span className="text-sm font-semibold text-gray-700">{group.label}</span>
+              <span className="text-sm font-bold text-gray-900">{formatCurrency(subtotal)}</span>
+            </div>
+            {group.items.map((pos: any, i: number) => (
+              <div key={pos.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 last:border-0">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 font-mono">{i + 1}.</span>
+                    <span className="text-sm text-gray-900">{pos.description}</span>
+                  </div>
+                  <div className="text-xs text-gray-500 ml-5">{pos.quantity} {pos.unit} × {formatCurrency(pos.unitPrice)}</div>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="font-bold text-sm">{formatCurrency(pos.total)}</span>
+                  <button onClick={() => deleteRegiPosition(pos.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })}
+
+      {adding && (
+        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+          <h4 className="font-semibold text-sm">Position hinzufügen</h4>
+          <Select label="Typ" options={POSITION_TYPES} value={form.type} onChange={set('type')} />
+          <Input label="Beschreibung *" value={form.description} onChange={set('description')} placeholder="z.B. Mauerwerk erstellen" />
+          <div className="grid grid-cols-3 gap-2">
+            <Input label="Menge" type="number" value={form.quantity} onChange={set('quantity')} />
+            <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={form.unit} onChange={set('unit')} />
+            <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />
+          </div>
+          <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+            Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Hinzufügen</Button>
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
+          </div>
+        </div>
+      )}
+
+      <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
+        <Plus size={16} /> Position hinzufügen
+      </Button>
+    </div>
+  );
+}
