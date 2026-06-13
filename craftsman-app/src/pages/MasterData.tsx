@@ -12,7 +12,7 @@ import {
 } from '../hooks/useMasterData';
 import { UNITS, formatDate } from '../utils';
 import type { EmployeeRole } from '../types';
-import { loadConfig, saveConfig, clearConfig, getLastSync, syncNow, SUPABASE_SQL } from '../sync/supabaseSync';
+import { loadConfig, saveConfig, clearConfig, getLastPull, syncNow, testConnection, SUPABASE_SQL } from '../sync/supabaseSync';
 
 const ROLE_OPTIONS: { value: EmployeeRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -396,8 +396,11 @@ function SyncTab() {
   const [url, setUrl] = useState('');
   const [anonKey, setAnonKey] = useState('');
   const [configured, setConfigured] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [connStatus, setConnStatus] = useState<{ ok: boolean; migrated?: boolean; message?: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
-  const [lastSync, setLastSync] = useState<string | null>(null);
+  const [progress, setProgress] = useState('');
+  const [lastPull, setLastPull] = useState<string | null>(null);
   const [result, setResult] = useState<{ pushed: number; pulled: number; errors: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -408,8 +411,17 @@ function SyncTab() {
       setAnonKey(cfg.anonKey);
       setConfigured(true);
     }
-    setLastSync(getLastSync());
+    setLastPull(getLastPull());
   }, []);
+
+  const handleTest = async () => {
+    if (!url.trim() || !anonKey.trim()) return;
+    setTesting(true);
+    setConnStatus(null);
+    const res = await testConnection({ url: url.trim(), anonKey: anonKey.trim() });
+    setConnStatus(res.ok ? { ok: true, migrated: res.migrated } : { ok: false, message: res.message });
+    setTesting(false);
+  };
 
   const handleSaveCfg = () => {
     if (!url.trim() || !anonKey.trim()) return;
@@ -422,6 +434,7 @@ function SyncTab() {
     setUrl('');
     setAnonKey('');
     setConfigured(false);
+    setConnStatus(null);
     setResult(null);
   };
 
@@ -430,14 +443,16 @@ function SyncTab() {
     if (!cfg) return;
     setSyncing(true);
     setResult(null);
+    setProgress('');
     try {
-      const res = await syncNow(cfg);
+      const res = await syncNow(cfg, setProgress);
       setResult(res);
-      setLastSync(getLastSync());
+      setLastPull(getLastPull());
     } catch (e) {
       setResult({ pushed: 0, pulled: 0, errors: [e instanceof Error ? e.message : 'Unbekannter Fehler'] });
     } finally {
       setSyncing(false);
+      setProgress('');
     }
   };
 
@@ -447,64 +462,101 @@ function SyncTab() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const canSave = url.trim() && anonKey.trim();
+
   return (
     <div className="space-y-4 mt-2">
+      {/* Connection setup */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Supabase Cloud-Sync</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="font-semibold text-sm text-gray-700">Supabase Cloud-Sync</h3>
+          {configured && (
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
+              Verbunden
+            </span>
+          )}
+        </div>
         <p className="text-xs text-gray-500">
-          Daten automatisch in der Cloud sichern und auf mehreren Geräten synchronisieren.
+          Daten in der Cloud sichern und auf mehreren Geräten synchronisieren.
         </p>
         <Input
           label="Supabase URL"
           value={url}
-          onChange={e => setUrl(e.target.value)}
+          onChange={e => { setUrl(e.target.value); setConnStatus(null); }}
           placeholder="https://xxxx.supabase.co"
         />
         <Input
           label="Anon Key"
           value={anonKey}
-          onChange={e => setAnonKey(e.target.value)}
-          placeholder="eyJhbGciOiJIUzI1NiIsInR5..."
+          onChange={e => { setAnonKey(e.target.value); setConnStatus(null); }}
+          placeholder="eyJhbGciOiJIUzI1NiIsInR5…"
         />
+
+        {/* Connection status */}
+        {connStatus && (
+          <div className={`p-3 rounded-xl text-xs ${connStatus.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+            {connStatus.ok
+              ? connStatus.migrated
+                ? '✓ Verbindung erfolgreich – Tabelle vorhanden'
+                : '✓ Verbindung erfolgreich – SQL Migration noch nicht ausgeführt (siehe unten)'
+              : `✗ ${connStatus.message}`}
+          </div>
+        )}
+
         <div className="flex gap-2">
-          <Button className="flex-1" onClick={handleSaveCfg} disabled={!url.trim() || !anonKey.trim()}>
-            <Cloud size={16} /> {configured ? 'Aktualisieren' : 'Verbinden'}
+          <Button variant="outline" onClick={handleTest} loading={testing} disabled={!canSave} className="flex-1">
+            Verbindung testen
+          </Button>
+          <Button onClick={handleSaveCfg} disabled={!canSave} className="flex-1">
+            <Cloud size={16} /> {configured ? 'Aktualisieren' : 'Speichern'}
           </Button>
           {configured && (
-            <Button variant="ghost" onClick={handleDisconnect}>
+            <Button variant="ghost" onClick={handleDisconnect} title="Verbindung trennen">
               <X size={16} />
             </Button>
           )}
         </div>
-        {configured && (
-          <div className="pt-1">
-            <Button className="w-full" variant="outline" loading={syncing} onClick={handleSync}>
-              <RefreshCw size={16} /> Sync starten
-            </Button>
-            {lastSync && (
-              <p className="text-xs text-gray-500 mt-2 text-center">
-                Letzter Sync: {formatDate(new Date(lastSync))}
-              </p>
-            )}
-            {result && (
-              <div className={`mt-2 p-3 rounded-xl text-xs ${result.errors.length > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
-                {result.errors.length > 0 ? (
-                  <div>
-                    <div className="font-medium">Fehler beim Sync:</div>
-                    {result.errors.map((e, i) => <div key={i}>{e}</div>)}
-                  </div>
-                ) : (
-                  <div>Hochgeladen: {result.pushed} · Heruntergeladen: {result.pulled}</div>
-                )}
-              </div>
-            )}
-          </div>
-        )}
       </div>
 
+      {/* Sync controls (only shown when configured) */}
+      {configured && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-gray-700">Synchronisierung</h3>
+          <p className="text-xs text-gray-500">
+            Sync läuft automatisch alle 5 Minuten wenn online. Manuell starten:
+          </p>
+          <Button className="w-full" variant="outline" loading={syncing} onClick={handleSync}>
+            <RefreshCw size={16} /> Jetzt synchronisieren
+          </Button>
+          {syncing && progress && (
+            <p className="text-xs text-gray-400 text-center animate-pulse">{progress}</p>
+          )}
+          {lastPull && !syncing && (
+            <p className="text-xs text-gray-400 text-center">
+              Letzter Sync: {formatDate(new Date(lastPull))}
+            </p>
+          )}
+          {result && !syncing && (
+            <div className={`p-3 rounded-xl text-xs ${result.errors.length > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+              {result.errors.length > 0 ? (
+                <div className="space-y-1">
+                  <div className="font-medium">Fehler beim Sync:</div>
+                  {result.errors.map((e, i) => <div key={i} className="font-mono">{e}</div>)}
+                </div>
+              ) : (
+                <div>
+                  ✓ Hochgeladen: {result.pushed} Einträge · Heruntergeladen: {result.pulled} neue
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* SQL migration */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-gray-700">SQL Migration</h3>
+          <h3 className="font-semibold text-sm text-gray-700">Schritt 1 – SQL Migration</h3>
           <button
             onClick={handleCopySQL}
             className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
@@ -514,11 +566,16 @@ function SyncTab() {
           </button>
         </div>
         <p className="text-xs text-gray-500">
-          Diesen SQL-Code einmalig im Supabase SQL-Editor ausführen (Dashboard → SQL Editor → New Query).
+          Diesen SQL-Code einmalig im Supabase SQL-Editor ausführen:<br />
+          <span className="font-medium">Dashboard → SQL Editor → New Query → Einfügen → Run</span>
         </p>
-        <pre className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap font-mono">
+        <pre className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap font-mono leading-relaxed">
           {SUPABASE_SQL}
         </pre>
+        <p className="text-xs text-gray-500">
+          <span className="font-medium">Schritt 2</span> – URL + Anon Key aus{' '}
+          <span className="font-medium">Settings → API</span> kopieren und oben einfügen.
+        </p>
       </div>
     </div>
   );

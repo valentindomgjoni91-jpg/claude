@@ -3,12 +3,15 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { db } from '../db';
 import { useAppStore } from '../stores/useAppStore';
 import { getPendingCount, clearSynced } from './syncQueue';
+import { loadConfig, syncNow } from './supabaseSync';
 
-const SYNC_INTERVAL_MS = 30_000;
+const QUEUE_INTERVAL_MS = 30_000;
+const SUPABASE_INTERVAL_MS = 5 * 60_000; // 5 min
 
 export function useSyncStatus() {
   const { isOnline, setSyncPending } = useAppStore();
-  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const queueIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const supabaseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const pendingCount = useLiveQuery(
     () => db.syncQueue.where('synced').equals(0).count(),
@@ -19,25 +22,42 @@ export function useSyncStatus() {
     setSyncPending(pendingCount ?? 0);
   }, [pendingCount, setSyncPending]);
 
-  const attemptSync = useCallback(async () => {
+  const attemptQueueSync = useCallback(async () => {
     if (!isOnline) return;
     const count = await getPendingCount();
-    if (count === 0) {
-      await clearSynced();
+    if (count === 0) await clearSynced();
+  }, [isOnline]);
+
+  const attemptSupabaseSync = useCallback(async () => {
+    if (!isOnline) return;
+    const cfg = loadConfig();
+    if (!cfg) return;
+    try {
+      await syncNow(cfg);
+    } catch {
+      // Silent background failure — errors surface on manual sync
     }
   }, [isOnline]);
 
   useEffect(() => {
     if (isOnline) {
-      attemptSync();
-      intervalRef.current = setInterval(attemptSync, SYNC_INTERVAL_MS);
+      attemptQueueSync();
+      queueIntervalRef.current = setInterval(attemptQueueSync, QUEUE_INTERVAL_MS);
+
+      // Kick off first Supabase sync shortly after coming online, then repeat
+      const firstSyncTimer = setTimeout(attemptSupabaseSync, 3000);
+      supabaseIntervalRef.current = setInterval(attemptSupabaseSync, SUPABASE_INTERVAL_MS);
+
+      return () => {
+        clearTimeout(firstSyncTimer);
+        if (queueIntervalRef.current) clearInterval(queueIntervalRef.current);
+        if (supabaseIntervalRef.current) clearInterval(supabaseIntervalRef.current);
+      };
     } else {
-      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (queueIntervalRef.current) clearInterval(queueIntervalRef.current);
+      if (supabaseIntervalRef.current) clearInterval(supabaseIntervalRef.current);
     }
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, [isOnline, attemptSync]);
+  }, [isOnline, attemptQueueSync, attemptSupabaseSync]);
 
   return { pendingCount: pendingCount ?? 0 };
 }
