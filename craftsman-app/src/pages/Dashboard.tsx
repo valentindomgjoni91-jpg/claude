@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { FileText, Clock, FolderKanban, ChevronRight, Calendar } from 'lucide-react';
+import { FileText, Clock, FolderKanban, ChevronRight, Calendar, TrendingUp } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
+import { startOfWeek, endOfWeek } from 'date-fns';
 import { db } from '../db';
 import { Card } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
-import { formatDate, todayISO } from '../utils';
+import { formatDate, formatHours, todayISO } from '../utils';
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'draft') return <Badge variant="warning">Entwurf</Badge>;
@@ -18,12 +19,6 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const today = todayISO();
 
-  const recentDailyReports = useLiveQuery(() =>
-    db.dailyReports.orderBy('createdAt').reverse().limit(5).toArray()
-  );
-  const recentRegiReports = useLiveQuery(() =>
-    db.regiReports.orderBy('createdAt').reverse().limit(3).toArray()
-  );
   const activeProjects = useLiveQuery(() =>
     db.projects.where('status').equals('active').count()
   );
@@ -34,9 +29,37 @@ export default function Dashboard() {
     db.dailyReports.where('status').equals('draft').count()
   );
 
+  const weekHours = useLiveQuery(async () => {
+    const now = new Date();
+    const weekStart = startOfWeek(now, { weekStartsOn: 1 }).toISOString().split('T')[0];
+    const weekEnd = endOfWeek(now, { weekStartsOn: 1 }).toISOString().split('T')[0];
+    const reportIds = (
+      await db.dailyReports.where('date').between(weekStart, weekEnd, true, true).toArray()
+    ).map(r => r.id);
+    if (reportIds.length === 0) return 0;
+    const entries = await db.timeEntries.where('reportId').anyOf(reportIds).toArray();
+    return entries.reduce((sum, e) => sum + e.totalHours, 0);
+  });
+
   const projectMap = useLiveQuery(async () => {
     const projects = await db.projects.toArray();
     return Object.fromEntries(projects.map(p => [p.id, p.title]));
+  });
+
+  const activityFeed = useLiveQuery(async () => {
+    const [daily, regi] = await Promise.all([
+      db.dailyReports.orderBy('createdAt').reverse().limit(8).toArray(),
+      db.regiReports.orderBy('createdAt').reverse().limit(8).toArray(),
+    ]);
+    type ActivityItem = {
+      id: string; type: 'daily' | 'regi'; title: string;
+      date: string; status: string; projectId: string; createdAt: string;
+    };
+    const combined: ActivityItem[] = [
+      ...daily.map(r => ({ id: r.id, type: 'daily' as const, title: r.title, date: r.date, status: r.status, projectId: r.projectId, createdAt: r.createdAt })),
+      ...regi.map(r => ({ id: r.id, type: 'regi' as const, title: r.title, date: r.date, status: r.status, projectId: r.projectId, createdAt: r.createdAt })),
+    ];
+    return combined.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8);
   });
 
   return (
@@ -48,18 +71,24 @@ export default function Dashboard() {
       </div>
 
       {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 gap-3">
         <Card className="text-center">
           <div className="text-2xl font-bold text-primary-600">{activeProjects ?? '—'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Projekte</div>
+          <div className="text-xs text-gray-500 mt-0.5">Aktive Projekte</div>
         </Card>
         <Card className="text-center">
-          <div className="text-2xl font-bold text-green-600">{todayReports ?? '—'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Heute</div>
+          <div className="text-2xl font-bold text-green-600">
+            {weekHours != null ? formatHours(weekHours) : '—'}
+          </div>
+          <div className="text-xs text-gray-500 mt-0.5">Stunden diese Woche</div>
+        </Card>
+        <Card className="text-center">
+          <div className="text-2xl font-bold text-blue-600">{todayReports ?? '—'}</div>
+          <div className="text-xs text-gray-500 mt-0.5">Rapporte heute</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-yellow-600">{draftCount ?? '—'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Offen</div>
+          <div className="text-xs text-gray-500 mt-0.5">Entwürfe offen</div>
         </Card>
       </div>
 
@@ -105,10 +134,13 @@ export default function Dashboard() {
         </div>
       </Card>
 
-      {/* Recent Daily Reports */}
+      {/* Activity Feed */}
       <Card padding="none">
         <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
-          <h3 className="font-semibold text-gray-900 text-sm">Letzte Tagesrapporte</h3>
+          <div className="flex items-center gap-2">
+            <TrendingUp size={14} className="text-primary-500" />
+            <h3 className="font-semibold text-gray-900 text-sm">Letzte Aktivität</h3>
+          </div>
           <button
             onClick={() => navigate('/archive')}
             className="text-xs text-primary-600 font-medium"
@@ -116,23 +148,28 @@ export default function Dashboard() {
             Alle anzeigen
           </button>
         </div>
-        {recentDailyReports?.length === 0 && (
+        {(activityFeed?.length ?? 0) === 0 && (
           <div className="px-4 py-6 text-center text-sm text-gray-400">
             Noch keine Rapporte vorhanden
           </div>
         )}
-        {recentDailyReports?.map((r) => (
+        {activityFeed?.map((r) => (
           <button
-            key={r.id}
-            onClick={() => navigate(`/tagesrapport/${r.id}`)}
+            key={`${r.type}-${r.id}`}
+            onClick={() => navigate(r.type === 'daily' ? `/tagesrapport/${r.id}` : `/regierapport/${r.id}`)}
             className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
           >
-            <div className="w-9 h-9 bg-primary-50 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Calendar size={16} className="text-primary-600" />
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
+              r.type === 'daily' ? 'bg-primary-50' : 'bg-orange-50'
+            }`}>
+              {r.type === 'daily'
+                ? <Calendar size={16} className="text-primary-600" />
+                : <FileText size={16} className="text-orange-600" />
+              }
             </div>
             <div className="flex-1 min-w-0">
               <div className="font-medium text-sm text-gray-900 truncate">{r.title}</div>
-              <div className="text-xs text-gray-500 flex items-center gap-2">
+              <div className="text-xs text-gray-500 flex items-center gap-1">
                 <span>{formatDate(r.date)}</span>
                 {projectMap && projectMap[r.projectId] && (
                   <span className="truncate">· {projectMap[r.projectId]}</span>
@@ -146,34 +183,6 @@ export default function Dashboard() {
           </button>
         ))}
       </Card>
-
-      {/* Recent Regi Reports */}
-      {(recentRegiReports?.length ?? 0) > 0 && (
-        <Card padding="none">
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900 text-sm">Letzte Regierapporte</h3>
-          </div>
-          {recentRegiReports?.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => navigate(`/regierapport/${r.id}`)}
-              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
-            >
-              <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FileText size={16} className="text-orange-600" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm text-gray-900 truncate">{r.title}</div>
-                <div className="text-xs text-gray-500">{formatDate(r.date)}</div>
-              </div>
-              <div className="flex items-center gap-2">
-                <StatusBadge status={r.status} />
-                <ChevronRight size={16} className="text-gray-400" />
-              </div>
-            </button>
-          ))}
-        </Card>
-      )}
 
       <div className="h-4" />
     </div>

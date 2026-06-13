@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { Edit2, Plus, Calendar, FileText, ChevronRight, MapPin, User, Phone } from 'lucide-react';
+import { Edit2, Plus, Calendar, FileText, ChevronRight, MapPin, User, Phone, Clock, TrendingUp } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
@@ -7,7 +7,7 @@ import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import { useProject } from '../hooks/useProjects';
 import { db } from '../db';
-import { formatDate } from '../utils';
+import { formatDate, formatHours, formatCurrency } from '../utils';
 import type { ProjectStatus } from '../types';
 
 function ProjectBadge({ status }: { status: ProjectStatus }) {
@@ -33,7 +33,39 @@ export default function ProjectDetail() {
     [id]
   );
 
+  const projectStats = useLiveQuery(async () => {
+    if (!id) return null;
+    const reports = await db.dailyReports.where('projectId').equals(id).toArray();
+    const reportIds = reports.map(r => r.id);
+    if (reportIds.length === 0) return { totalHours: 0, totalMaterialCost: 0, totalMachineCost: 0 };
+
+    const [timeEntries, materialEntries, machineEntries] = await Promise.all([
+      db.timeEntries.where('reportId').anyOf(reportIds).toArray(),
+      db.materialEntries.where('reportId').anyOf(reportIds).filter(e => e.reportType === 'daily').toArray(),
+      db.machineEntries.where('reportId').anyOf(reportIds).filter(e => e.reportType === 'daily').toArray(),
+    ]);
+
+    const totalHours = timeEntries.reduce((sum, e) => sum + e.totalHours, 0);
+    const totalMaterialCost = materialEntries.reduce(
+      (sum, e) => sum + (e.quantity ?? 0) * (e.unitPrice ?? 0), 0
+    );
+    const totalMachineCost = machineEntries.reduce(
+      (sum, e) => sum + (e.hours ?? 0) * (e.hourlyRate ?? 0), 0
+    );
+
+    return { totalHours, totalMaterialCost, totalMachineCost };
+  }, [id]);
+
   if (!project) return <div className="p-4 text-gray-500">Projekt nicht gefunden.</div>;
+
+  const progressPercent = (() => {
+    if (!project.startDate || !project.endDate) return null;
+    const start = new Date(project.startDate).getTime();
+    const end = new Date(project.endDate).getTime();
+    const now = Date.now();
+    if (end <= start) return null;
+    return Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
+  })();
 
   return (
     <div>
@@ -100,6 +132,56 @@ export default function ProjectDetail() {
             <span className="text-xs">Regierapport</span>
           </Button>
         </div>
+
+        {/* Project Statistics */}
+        {projectStats && (
+          <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <TrendingUp size={14} className="text-primary-500" />
+              <h3 className="font-semibold text-sm text-gray-900">Projektstatistik</h3>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-1 text-primary-600">
+                  <Clock size={12} />
+                  <span className="text-lg font-bold">{formatHours(projectStats.totalHours)}</span>
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Stunden</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-emerald-600">
+                  {formatCurrency(projectStats.totalMaterialCost)}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Material</div>
+              </div>
+              <div className="text-center">
+                <div className="text-lg font-bold text-orange-600">
+                  {formatCurrency(projectStats.totalMachineCost)}
+                </div>
+                <div className="text-xs text-gray-500 mt-0.5">Maschinen</div>
+              </div>
+            </div>
+            {progressPercent !== null && (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span>Fortschritt</span>
+                  <span>{progressPercent}%</span>
+                </div>
+                <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-primary-500 rounded-full transition-all duration-500"
+                    style={{ width: `${progressPercent}%` }}
+                  />
+                </div>
+                {project.endDate && (
+                  <div className="text-xs text-gray-400 text-right">
+                    Ende: {formatDate(project.endDate)}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Daily Reports */}
         <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
