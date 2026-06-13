@@ -25,7 +25,12 @@ const LAST_PULL_KEY = 'craftsman_last_pull';
 export function loadConfig(): SupabaseConfig | null {
   try {
     const raw = localStorage.getItem(CONFIG_KEY);
-    return raw ? (JSON.parse(raw) as SupabaseConfig) : null;
+    if (raw) return JSON.parse(raw) as SupabaseConfig;
+    // Fall back to build-time env vars if no manual config stored
+    const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+    const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
+    if (url && anonKey) return { url, anonKey };
+    return null;
   } catch {
     return null;
   }
