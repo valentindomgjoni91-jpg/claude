@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { Check, Plus, Trash2, Download, PenTool, X } from 'lucide-react';
+import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -10,6 +10,7 @@ import Textarea from '../components/ui/Textarea';
 import { Tabs } from '../components/ui/Tabs';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
+import ActionSheet from '../components/ui/ActionSheet';
 import {
   useRegiReport, useRegiPositions,
   createRegiReport, updateRegiReport, signRegiReport,
@@ -20,6 +21,8 @@ import { useCompany } from '../hooks/useMasterData';
 import { todayISO, formatCurrency, UNITS } from '../utils';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
 import { db } from '../db';
+import { sharePdf, sendByEmail, buildRegiReportEmailBody } from '../utils/share';
+import { duplicateRegiReport } from '../hooks/useDuplicate';
 
 const POSITION_TYPES = [
   { value: 'labor', label: 'Arbeit' },
@@ -48,6 +51,7 @@ export default function RegiReportForm() {
   const [saving, setSaving] = useState(false);
   const [reportId, setReportId] = useState(id);
   const [sigModalOpen, setSigModalOpen] = useState(false);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const sigRef = useRef<SignatureCanvas>(null);
 
@@ -123,20 +127,74 @@ export default function RegiReportForm() {
     setSigModalOpen(false);
   };
 
-  const handlePdf = async () => {
-    if (!reportId || !report) return;
+  const buildPdf = async () => {
+    if (!reportId || !report) return null;
     const [proj, company_] = await Promise.all([
       db.projects.get(form.projectId),
       db.company.toCollection().first(),
     ]);
-    if (!proj) return;
-    const pdf = generateRegiReportPdf({
-      report,
-      project: proj,
-      positions: positions || [],
+    if (!proj) return null;
+    return {
+      pdf: generateRegiReportPdf({
+        report,
+        project: proj,
+        positions: positions || [],
+        company: company_ || null,
+      }),
+      proj,
       company: company_ || null,
+    };
+  };
+
+  const handleDownload = async () => {
+    const result = await buildPdf();
+    if (!result) return;
+    result.pdf.save(`Regierapport_${form.date}.pdf`);
+  };
+
+  const handleShare = async () => {
+    const result = await buildPdf();
+    if (!result) return;
+    await sharePdf(result.pdf, {
+      filename: `Regierapport_${form.date}.pdf`,
+      title: form.title,
+      subject: `Regierapport ${form.date} – ${result.proj.title}`,
+      body: buildRegiReportEmailBody({
+        projectTitle: result.proj.title,
+        date: form.date,
+        companyName: result.company?.name || '',
+        grossTotal,
+        customerName: report?.customerName,
+      }),
     });
-    pdf.save(`Regierapport_${form.date}.pdf`);
+  };
+
+  const handleEmail = async () => {
+    const result = await buildPdf();
+    if (!result) return;
+    await sendByEmail(result.pdf, {
+      filename: `Regierapport_${form.date}.pdf`,
+      title: form.title,
+      subject: `Regierapport ${form.date} – ${result.proj.title}`,
+      body: buildRegiReportEmailBody({
+        projectTitle: result.proj.title,
+        date: form.date,
+        companyName: result.company?.name || '',
+        grossTotal,
+        customerName: report?.customerName,
+      }),
+    });
+  };
+
+  const handleMarkInvoiced = async () => {
+    if (!reportId) return;
+    await updateRegiReport(reportId, { status: 'invoiced' });
+  };
+
+  const handleDuplicate = async () => {
+    if (!reportId) return;
+    const newId = await duplicateRegiReport(reportId);
+    navigate(`/regierapport/${newId}`);
   };
 
   const projectOptions = projects?.map(p => ({ value: p.id, label: p.title })) || [];
@@ -167,8 +225,8 @@ export default function RegiReportForm() {
         action={
           <div className="flex gap-2">
             {reportId && (
-              <Button variant="ghost" size="sm" onClick={handlePdf}>
-                <Download size={16} />
+              <Button variant="ghost" size="sm" onClick={() => setActionSheetOpen(true)}>
+                <MoreVertical size={16} />
               </Button>
             )}
             <Button size="sm" loading={saving} onClick={handleSave}>
@@ -279,7 +337,19 @@ export default function RegiReportForm() {
               )}
             </div>
 
-            <Button variant="outline" className="w-full" onClick={handlePdf}>
+            {/* Status-Flow */}
+            {report?.status === 'signed' && (
+              <Button variant="secondary" className="w-full" onClick={handleMarkInvoiced}>
+                <Receipt size={16} /> Als verrechnet markieren
+              </Button>
+            )}
+            {report?.status === 'invoiced' && (
+              <div className="flex justify-center">
+                <Badge variant="info" className="text-sm py-2 px-4">✓ Verrechnet</Badge>
+              </div>
+            )}
+
+            <Button variant="outline" className="w-full" onClick={handleDownload}>
               <Download size={16} /> PDF erstellen & speichern
             </Button>
           </div>
@@ -318,6 +388,45 @@ export default function RegiReportForm() {
           </div>
         </div>
       </Modal>
+
+      {/* Export / Actions Bottom Sheet */}
+      <ActionSheet
+        open={actionSheetOpen}
+        onClose={() => setActionSheetOpen(false)}
+        title="Aktionen"
+        items={[
+          {
+            icon: <Download size={18} />,
+            label: 'PDF herunterladen',
+            description: 'Regierapport als PDF-Datei speichern',
+            onClick: handleDownload,
+          },
+          {
+            icon: <Share2 size={18} />,
+            label: 'Teilen',
+            description: 'PDF via App teilen (iOS/Android)',
+            onClick: handleShare,
+          },
+          {
+            icon: <PenTool size={18} />,
+            label: 'Per E-Mail senden',
+            description: 'PDF herunterladen + E-Mail-App öffnen',
+            onClick: handleEmail,
+          },
+          {
+            icon: <Copy size={18} />,
+            label: 'Rapport duplizieren',
+            description: 'Kopie als neuen Entwurf erstellen',
+            onClick: handleDuplicate,
+          },
+          ...(report?.status === 'signed' ? [{
+            icon: <Receipt size={18} />,
+            label: 'Als verrechnet markieren',
+            description: 'Status auf "Verrechnet" setzen',
+            onClick: handleMarkInvoiced,
+          }] : []),
+        ]}
+      />
     </div>
   );
 }

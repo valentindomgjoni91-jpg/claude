@@ -2,7 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   Check, Clock, Package, Truck, FileText, Image, Users,
-  Plus, Trash2, Camera, Download, ChevronDown, ChevronUp
+  Plus, Trash2, Camera, Download, ChevronDown, ChevronUp,
+  Share2, Copy, MoreVertical,
 } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
@@ -11,6 +12,9 @@ import Select from '../components/ui/Select';
 import Textarea from '../components/ui/Textarea';
 import { Tabs } from '../components/ui/Tabs';
 import Badge from '../components/ui/Badge';
+import ActionSheet from '../components/ui/ActionSheet';
+import { sharePdf, sendByEmail, buildDailyReportEmailBody } from '../utils/share';
+import { duplicateDailyReport } from '../hooks/useDuplicate';
 import {
   useDailyReport, useTimeEntries, useMaterialEntries, useMachineEntries,
   useSubcontractorEntries, usePhotos,
@@ -50,6 +54,7 @@ export default function DailyReportForm() {
   const [activeTab, setActiveTab] = useState('info');
   const [saving, setSaving] = useState(false);
   const [reportId, setReportId] = useState(id);
+  const [actionSheetOpen, setActionSheetOpen] = useState(false);
 
   const [form, setForm] = useState({
     projectId: searchParams.get('projectId') || '',
@@ -120,28 +125,83 @@ export default function DailyReportForm() {
     }
   };
 
-  const handlePdf = async () => {
-    if (!reportId || !report) return;
+  const buildPdf = async () => {
+    if (!reportId || !report) return null;
     const [proj, employees_, machines_, company_] = await Promise.all([
       db.projects.get(form.projectId),
       db.employees.toArray(),
       db.machines.toArray(),
       db.company.toCollection().first(),
     ]);
-    if (!proj) return;
-    const pdf = generateDailyReportPdf({
-      report,
-      project: proj,
-      timeEntries: timeEntries || [],
-      materialEntries: materialEntries || [],
-      machineEntries: machineEntries || [],
-      subcontractorEntries: subcontractorEntries || [],
-      photos: photos || [],
-      employees: employees_,
-      machines: machines_,
+    if (!proj) return null;
+    return {
+      pdf: generateDailyReportPdf({
+        report,
+        project: proj,
+        timeEntries: timeEntries || [],
+        materialEntries: materialEntries || [],
+        machineEntries: machineEntries || [],
+        subcontractorEntries: subcontractorEntries || [],
+        photos: photos || [],
+        employees: employees_,
+        machines: machines_,
+        company: company_ || null,
+      }),
+      proj,
       company: company_ || null,
+    };
+  };
+
+  const handleDownload = async () => {
+    const result = await buildPdf();
+    if (!result) return;
+    result.pdf.save(`Tagesrapport_${form.date}.pdf`);
+  };
+
+  const handleShare = async () => {
+    const result = await buildPdf();
+    if (!result) return;
+    const totalHours_ = timeEntries?.reduce((s, e) => s + e.totalHours, 0) ?? 0;
+    const totalMat_ = materialEntries?.reduce((s, e) => s + e.total, 0) ?? 0;
+    await sharePdf(result.pdf, {
+      filename: `Tagesrapport_${form.date}.pdf`,
+      title: form.title,
+      subject: `Tagesrapport ${form.date} – ${result.proj.title}`,
+      body: buildDailyReportEmailBody({
+        projectTitle: result.proj.title,
+        date: form.date,
+        companyName: result.company?.name || '',
+        totalHours: totalHours_,
+        totalMaterialCost: totalMat_,
+      }),
     });
-    pdf.save(`Tagesrapport_${form.date}.pdf`);
+  };
+
+  const handleEmail = async () => {
+    const result = await buildPdf();
+    if (!result) return;
+    const totalHours_ = timeEntries?.reduce((s, e) => s + e.totalHours, 0) ?? 0;
+    const totalMat_ = materialEntries?.reduce((s, e) => s + e.total, 0) ?? 0;
+    await sendByEmail(result.pdf, {
+      filename: `Tagesrapport_${form.date}.pdf`,
+      title: form.title,
+      subject: `Tagesrapport ${form.date} – ${result.proj.title}`,
+      body: buildDailyReportEmailBody({
+        projectTitle: result.proj.title,
+        date: form.date,
+        companyName: result.company?.name || '',
+        totalHours: totalHours_,
+        totalMaterialCost: totalMat_,
+        recipientEmail: result.proj.clientContact?.match(/[\w.+-]+@[\w.-]+\.\w+/)?.[0],
+      } as any),
+      recipientEmail: result.proj.clientContact?.match(/[\w.+-]+@[\w.-]+\.\w+/)?.[0],
+    });
+  };
+
+  const handleDuplicate = async () => {
+    if (!reportId) return;
+    const newId = await duplicateDailyReport(reportId);
+    navigate(`/tagesrapport/${newId}`);
   };
 
   const projectOptions = projects?.map(p => ({ value: p.id, label: p.title })) || [];
@@ -174,8 +234,8 @@ export default function DailyReportForm() {
         action={
           <div className="flex gap-2">
             {reportId && (
-              <Button variant="ghost" size="sm" onClick={handlePdf}>
-                <Download size={16} />
+              <Button variant="ghost" size="sm" onClick={() => setActionSheetOpen(true)}>
+                <MoreVertical size={16} />
               </Button>
             )}
             <Button size="sm" loading={saving} onClick={() => handleSave()}>
@@ -253,6 +313,39 @@ export default function DailyReportForm() {
           </div>
         )}
       </div>
+
+      {/* Export / Actions Bottom Sheet */}
+      <ActionSheet
+        open={actionSheetOpen}
+        onClose={() => setActionSheetOpen(false)}
+        title="Aktionen"
+        items={[
+          {
+            icon: <Download size={18} />,
+            label: 'PDF herunterladen',
+            description: 'Rapport als PDF-Datei speichern',
+            onClick: handleDownload,
+          },
+          {
+            icon: <Share2 size={18} />,
+            label: 'Teilen',
+            description: 'PDF via App teilen (iOS/Android)',
+            onClick: handleShare,
+          },
+          {
+            icon: <FileText size={18} />,
+            label: 'Per E-Mail senden',
+            description: 'PDF herunterladen + E-Mail-App öffnen',
+            onClick: handleEmail,
+          },
+          {
+            icon: <Copy size={18} />,
+            label: 'Rapport duplizieren',
+            description: 'Kopie mit heutigem Datum erstellen',
+            onClick: handleDuplicate,
+          },
+        ]}
+      />
     </div>
   );
 }
