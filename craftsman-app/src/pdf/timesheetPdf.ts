@@ -27,7 +27,7 @@ export function generateTimesheetPdf(data: TimesheetPdfData): jsPDF {
 
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  let y = margin;
+  let y: number;
 
   // Header bar
   const headerH = 28;

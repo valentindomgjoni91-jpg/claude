@@ -25,6 +25,7 @@ import { generateInvoicePdf } from '../pdf/invoicePdf';
 import { db } from '../db';
 import { sharePdf, sendByEmail, buildRegiReportEmailBody } from '../utils/share';
 import { duplicateRegiReport } from '../hooks/useDuplicate';
+import type { RegiPosition, Material, Machine } from '../types';
 
 const POSITION_TYPES = [
   { value: 'labor', label: 'Arbeit' },
@@ -71,6 +72,7 @@ export default function RegiReportForm() {
 
   useEffect(() => {
     if (report) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         projectId: report.projectId,
         date: report.date,
@@ -311,8 +313,8 @@ export default function RegiReportForm() {
               </div>
               {Object.entries(positionsByType).map(([type, pos]) => {
                 const typeLabels: Record<string, string> = { labor: 'Arbeit', material: 'Material', machine: 'Maschinen', extra: 'Zusatz' };
-                const subtotal = (pos as any[])?.reduce((s: number, p: any) => s + p.total, 0) ?? 0;
-                if (!pos || (pos as any[]).length === 0) return null;
+                const subtotal = pos?.reduce((s, p) => s + p.total, 0) ?? 0;
+                if (!pos || pos.length === 0) return null;
                 return (
                   <div key={type} className="px-4 py-2.5 flex justify-between border-b border-gray-50 dark:border-gray-700">
                     <span className="text-sm text-gray-600 dark:text-gray-300">{typeLabels[type]}</span>
@@ -477,10 +479,10 @@ export default function RegiReportForm() {
 
 function PositionsTab({ positions, onEnsureReport, materials, machines }: {
   reportId?: string;
-  positions: any[];
+  positions: RegiPosition[];
   onEnsureReport: () => Promise<string>;
-  materials: any[];
-  machines: any[];
+  materials: Material[];
+  machines: Machine[];
 }) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({
@@ -494,14 +496,14 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleMaterialSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const mat = materials.find((m: any) => m.id === e.target.value);
+    const mat = materials.find(m => m.id === e.target.value);
     if (mat) {
       setForm(f => ({ ...f, description: mat.name, unit: mat.unit, unitPrice: mat.unitPrice.toString() }));
     }
   };
 
   const handleMachineSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const machine = machines.find((m: any) => m.id === e.target.value);
+    const machine = machines.find(m => m.id === e.target.value);
     if (machine) {
       setForm(f => ({ ...f, description: machine.name, unitPrice: machine.hourlyRate.toString(), unit: 'h' }));
     }
@@ -514,7 +516,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
     const price = Number(form.unitPrice);
     await addRegiPosition({
       regiReportId: rId,
-      type: form.type as any,
+      type: form.type as RegiPosition['type'],
       description: form.description,
       quantity: qty,
       unit: form.unit,
@@ -535,14 +537,14 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
     <div className="space-y-3">
       {typeGroups.map(group => {
         if (group.items.length === 0) return null;
-        const subtotal = group.items.reduce((s: number, p: any) => s + p.total, 0);
+        const subtotal = group.items.reduce((s, p) => s + p.total, 0);
         return (
           <div key={group.value} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-700 flex justify-between">
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{group.label}</span>
               <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(subtotal)}</span>
             </div>
-            {group.items.map((pos: any, i: number) => (
+            {group.items.map((pos, i) => (
               <div key={pos.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 dark:border-gray-700 last:border-0">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -570,7 +572,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
           {form.type === 'material' && materials.length > 0 && (
             <Select
               label="Aus Stammdaten"
-              options={materials.map((m: any) => ({ value: m.id, label: m.name }))}
+              options={materials.map(m => ({ value: m.id, label: m.name }))}
               placeholder="Wählen oder manuell..."
               onChange={handleMaterialSelect}
               value=""
@@ -579,7 +581,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
           {form.type === 'machine' && machines.length > 0 && (
             <Select
               label="Aus Stammdaten"
-              options={machines.map((m: any) => ({ value: m.id, label: m.name }))}
+              options={machines.map(m => ({ value: m.id, label: m.name }))}
               placeholder="Wählen oder manuell..."
               onChange={handleMachineSelect}
               value=""

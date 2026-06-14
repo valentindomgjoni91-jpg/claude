@@ -4,13 +4,14 @@ import { getSupabaseClient } from '../sync/supabaseClient';
 import { loadConfig } from '../sync/supabaseSync';
 
 export function useAuth() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
   const configured = !!loadConfig();
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(configured);
 
   useEffect(() => {
-    if (!configured) { setLoading(false); return; }
+    if (!configured) return;
     const client = getSupabaseClient();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!client) { setLoading(false); return; }
 
     client.auth.getSession().then(({ data }) => {

@@ -34,6 +34,7 @@ export default function ProjectForm() {
 
   useEffect(() => {
     if (project) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         title: project.title,
         clientName: project.clientName,

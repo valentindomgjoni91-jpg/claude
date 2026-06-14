@@ -32,7 +32,7 @@ import { useEmployees, useMachines, useMaterials, useCompany } from '../hooks/us
 import { todayISO, nowISO, calcTotalHours, formatHours, formatCurrency, WEATHER_LABELS, UNITS, cn } from '../utils';
 import { generateDailyReportPdf } from '../pdf/dailyReportPdf';
 import { db } from '../db';
-import type { Weather } from '../types';
+import type { Weather, TimeEntry, MaterialEntry, MachineEntry, SubcontractorEntry, Photo, Material, Machine } from '../types';
 
 export default function DailyReportForm() {
   const { id } = useParams();
@@ -73,6 +73,7 @@ export default function DailyReportForm() {
 
   useEffect(() => {
     if (report) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setForm({
         projectId: report.projectId,
         date: report.date,
@@ -476,7 +477,7 @@ function InfoTab({ form, set, projectOptions }: InfoTabProps) {
 // ---- TimeTab ----
 
 interface TimeTabProps {
-  entries: unknown[];
+  entries: TimeEntry[];
   employeeOptions: { value: string; label: string }[];
   onEnsureReport: () => Promise<string>;
   totalHours: number;
@@ -525,7 +526,7 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
         </div>
       )}
 
-      {(entries as any[]).map((entry: any) => (
+      {entries.map((entry) => (
         <TimeEntryCard key={entry.id} entry={entry} employeeOptions={employeeOptions} />
       ))}
 
@@ -565,7 +566,7 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
   );
 }
 
-function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions: { value: string; label: string }[] }) {
+function TimeEntryCard({ entry, employeeOptions }: { entry: TimeEntry; employeeOptions: { value: string; label: string }[] }) {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({
     startTime: entry.startTime || '',
@@ -625,14 +626,20 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions
 
 // ---- MaterialTab ----
 
-function MaterialTab({ entries, materialOptions, materials, onEnsureReport, totalCost }: any) {
+function MaterialTab({ entries, materialOptions, materials, onEnsureReport, totalCost }: {
+  entries: MaterialEntry[];
+  materialOptions: { value: string; label: string }[];
+  materials: Material[];
+  onEnsureReport: () => Promise<string>;
+  totalCost: number;
+}) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0', note: '' });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleMaterialSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const mat = materials.find((m: any) => m.id === e.target.value);
+    const mat = materials.find(m => m.id === e.target.value);
     if (mat) {
       setForm(f => ({ ...f, materialId: e.target.value, description: mat.name, unit: mat.unit, unitPrice: mat.unitPrice.toString() }));
     }
@@ -666,7 +673,7 @@ function MaterialTab({ entries, materialOptions, materials, onEnsureReport, tota
           <span className="font-bold text-green-800">{formatCurrency(totalCost)}</span>
         </div>
       )}
-      {entries.map((entry: any) => (
+      {entries.map((entry) => (
         <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex justify-between items-start">
           <div className="flex-1 min-w-0 pr-3">
             <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{entry.description}</div>
@@ -717,14 +724,21 @@ function MaterialTab({ entries, materialOptions, materials, onEnsureReport, tota
 
 // ---- MachineTab ----
 
-function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsureReport, totalCost }: any) {
+function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsureReport, totalCost }: {
+  entries: MachineEntry[];
+  machineOptions: { value: string; label: string }[];
+  employeeOptions: { value: string; label: string }[];
+  machines: Machine[];
+  onEnsureReport: () => Promise<string>;
+  totalCost: number;
+}) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ machineId: '', description: '', hours: '1', operatorId: '', hourlyRate: '0', note: '' });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
   const handleMachineSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const machine = machines.find((m: any) => m.id === e.target.value);
+    const machine = machines.find(m => m.id === e.target.value);
     if (machine) {
       setForm(f => ({ ...f, machineId: e.target.value, description: machine.name, hourlyRate: machine.hourlyRate.toString() }));
     }
@@ -758,8 +772,8 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
           <span className="font-bold text-yellow-800">{formatCurrency(totalCost)}</span>
         </div>
       )}
-      {entries.map((entry: any) => {
-        const opName = employeeOptions.find((e: any) => e.value === entry.operatorId)?.label;
+      {entries.map((entry) => {
+        const opName = employeeOptions.find(e => e.value === entry.operatorId)?.label;
         return (
           <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-3">
@@ -813,7 +827,11 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
 
 // ---- SubcontractorTab ----
 
-function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
+function SubcontractorTab({ entries, onEnsureReport, totalCost }: {
+  entries: SubcontractorEntry[];
+  onEnsureReport: () => Promise<string>;
+  totalCost: number;
+}) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ company: '', description: '', amount: '', note: '' });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
@@ -847,7 +865,7 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
         </div>
       )}
 
-      {entries.map((entry: any) => (
+      {entries.map((entry) => (
         <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-3">
@@ -924,7 +942,7 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
 
 // ---- PhotosTab ----
 
-function PhotosTab({ photos, onEnsureReport }: any) {
+function PhotosTab({ photos, onEnsureReport }: { photos: Photo[]; onEnsureReport: () => Promise<string> }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const getGPS = (): Promise<{ latitude: number; longitude: number } | null> => {
@@ -977,7 +995,7 @@ function PhotosTab({ photos, onEnsureReport }: any) {
       </Button>
 
       <div className="grid grid-cols-2 gap-2">
-        {photos.map((photo: any) => (
+        {photos.map((photo) => (
           <PhotoCard key={photo.id} photo={photo} />
         ))}
       </div>
@@ -991,7 +1009,7 @@ function PhotosTab({ photos, onEnsureReport }: any) {
   );
 }
 
-function PhotoCard({ photo }: { photo: any }) {
+function PhotoCard({ photo }: { photo: Photo }) {
   const [note, setNote] = useState(photo.note || '');
 
   const handleNoteBlur = async () => {

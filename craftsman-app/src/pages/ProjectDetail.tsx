@@ -72,6 +72,16 @@ export default function ProjectDetail() {
 
   const company = useCompany();
 
+  const progressPercent = (() => {
+    if (!project?.startDate || !project?.endDate) return null;
+    const start = new Date(project.startDate).getTime();
+    const end = new Date(project.endDate).getTime();
+    // eslint-disable-next-line react-hooks/purity
+    const now = Date.now();
+    if (end <= start) return null;
+    return Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
+  })();
+
   const handleProjectReportPdf = async () => {
     if (!project || !id) return;
     const [allDailyReports, allRegiReports] = await Promise.all([
@@ -95,15 +105,6 @@ export default function ProjectDetail() {
   };
 
   if (!project) return <div className="p-4 text-gray-500 dark:text-gray-400">Projekt nicht gefunden.</div>;
-
-  const progressPercent = (() => {
-    if (!project.startDate || !project.endDate) return null;
-    const start = new Date(project.startDate).getTime();
-    const end = new Date(project.endDate).getTime();
-    const now = Date.now();
-    if (end <= start) return null;
-    return Math.min(100, Math.max(0, Math.round(((now - start) / (end - start)) * 100)));
-  })();
 
   return (
     <div>

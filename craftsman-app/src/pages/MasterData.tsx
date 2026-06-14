@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
 import { useLanguage, LANGUAGE_NAMES, type Lang } from '../i18n';
 import { exportProjectsCSV, exportRegiReportsCSV, exportTimeEntriesCSV } from '../utils/csvExport';
@@ -420,14 +420,15 @@ function MaterialsTab() {
 
 function SyncTab() {
   const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
-  const [url, setUrl] = useState('');
-  const [anonKey, setAnonKey] = useState('');
-  const [configured, setConfigured] = useState(false);
+  const _initCfg = loadConfig();
+  const [url, setUrl] = useState(_initCfg?.url ?? '');
+  const [anonKey, setAnonKey] = useState(_initCfg?.anonKey ?? '');
+  const [configured, setConfigured] = useState(!!_initCfg);
   const [testing, setTesting] = useState(false);
   const [connStatus, setConnStatus] = useState<{ ok: boolean; migrated?: boolean; message?: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState('');
-  const [lastPull, setLastPull] = useState<string | null>(null);
+  const [lastPull, setLastPull] = useState<string | null>(getLastPull());
   const [result, setResult] = useState<{ pushed: number; pulled: number; errors: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -447,15 +448,6 @@ function SyncTab() {
   const [notifEnabled, setNotifEnabled] = useState(getNotificationsEnabled());
   const notifSupported = 'Notification' in window;
 
-  useEffect(() => {
-    const cfg = loadConfig();
-    if (cfg) {
-      setUrl(cfg.url);
-      setAnonKey(cfg.anonKey);
-      setConfigured(true);
-    }
-    setLastPull(getLastPull());
-  }, []);
 
   const handleTest = async () => {
     if (!url.trim() || !anonKey.trim()) return;

@@ -25,7 +25,7 @@ export function generateProjectReportPdf(data: ProjectReportPdfData): jsPDF {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const margin = 15;
-  let y = margin;
+  let y: number;
 
   // ── Header ────────────────────────────────────────────────────────────────
   const headerH = 32;
