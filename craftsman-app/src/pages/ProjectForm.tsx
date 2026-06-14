@@ -7,6 +7,7 @@ import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Textarea from '../components/ui/Textarea';
 import { useProject, createProject, updateProject, archiveProject } from '../hooks/useProjects';
+import type { ProjectStatus } from '../types';
 import { useEmployees } from '../hooks/useMasterData';
 import { todayISO } from '../utils';
 
@@ -24,7 +25,7 @@ export default function ProjectForm() {
     clientContact: '',
     siteAddress: '',
     description: '',
-    status: 'active' as const,
+    status: 'active' as ProjectStatus,
     responsibleId: '',
     startDate: todayISO(),
     endDate: '',
@@ -39,7 +40,7 @@ export default function ProjectForm() {
         clientContact: project.clientContact || '',
         siteAddress: project.siteAddress,
         description: project.description || '',
-        status: project.status as 'active',
+        status: project.status,
         responsibleId: project.responsibleId || '',
         startDate: project.startDate || todayISO(),
         endDate: project.endDate || '',
@@ -93,8 +94,8 @@ export default function ProjectForm() {
       />
 
       <div className="px-4 py-4 space-y-4">
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
-          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">Projektangaben</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wide">Projektangaben</h3>
           <Input label="Projektbezeichnung *" value={form.title} onChange={set('title')} placeholder="z.B. Neubau EFH Muster" />
           <Input label="Startdatum" type="date" value={form.startDate} onChange={set('startDate')} />
           <Input label="Enddatum (geplant)" type="date" value={form.endDate} onChange={set('endDate')} />
@@ -108,14 +109,14 @@ export default function ProjectForm() {
           />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
-          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">Kunde</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wide">Kunde</h3>
           <Input label="Kunde *" value={form.clientName} onChange={set('clientName')} placeholder="z.B. Familie Müller" />
           <Input label="Kontakt / Telefon" value={form.clientContact} onChange={set('clientContact')} placeholder="z.B. +41 79 123 45 67" />
         </div>
 
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
-          <h3 className="font-semibold text-gray-700 text-sm uppercase tracking-wide">Baustelle</h3>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
+          <h3 className="font-semibold text-gray-700 dark:text-gray-200 text-sm uppercase tracking-wide">Baustelle</h3>
           <Input label="Baustellenadresse *" value={form.siteAddress} onChange={set('siteAddress')} placeholder="z.B. Musterstrasse 1, 8001 Zürich" />
           <Textarea label="Beschreibung / Bemerkungen" value={form.description} onChange={set('description')} placeholder="Kurzbeschreibung des Projekts…" />
         </div>

@@ -106,8 +106,8 @@ function CompanyTab() {
 
   return (
     <div className="space-y-4 mt-2">
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
-        <h3 className="font-semibold text-sm text-gray-700">Firmendaten</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Firmendaten</h3>
         <Input label="Firmenname" value={form.name} onChange={set('name')} />
         <Input label="Strasse" value={form.street} onChange={set('street')} />
         <div className="grid grid-cols-3 gap-2">
@@ -121,8 +121,8 @@ function CompanyTab() {
         <Input label="Fusszeilen-Text (PDF)" value={form.footerText} onChange={set('footerText')} />
         <Input label="IBAN / Bankverbindung" value={form.bankAccount} onChange={set('bankAccount')} placeholder="CH00 0000 0000 0000 0000 0" />
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Firmenlogo (PDF)</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Firmenlogo (PDF)</h3>
         {form.logoUrl ? (
           <div className="flex items-center gap-3">
             <img src={form.logoUrl} alt="Logo" className="h-14 object-contain border border-gray-200 rounded-lg p-1 bg-white" />
@@ -135,15 +135,15 @@ function CompanyTab() {
             </button>
           </div>
         ) : (
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-primary-600 border border-dashed border-gray-300 rounded-xl p-3 hover:bg-gray-50">
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-primary-600 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
             <Upload size={16} />
             <span>Logo hochladen (PNG / JPG)</span>
             <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleLogoUpload} />
           </label>
         )}
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Sprache / Langue / Lingua</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Sprache / Langue / Lingua</h3>
         <div className="grid grid-cols-3 gap-2">
           {(Object.entries(LANGUAGE_NAMES) as [Lang, string][]).map(([code, name]) => (
             <button
@@ -151,8 +151,8 @@ function CompanyTab() {
               onClick={() => setLang(code)}
               className={`py-2 px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
                 lang === code
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+                  ? 'border-primary-500 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300'
+                  : 'border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-500'
               }`}
             >
               {name}
@@ -198,7 +198,7 @@ function EmployeesTab() {
     <div className="space-y-3 mt-2">
       {employees?.map(emp => (
         editingId === emp.id ? (
-          <div key={emp.id} className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+          <div key={emp.id} className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
             <div className="grid grid-cols-2 gap-2">
               <Input label="Vorname" value={editForm.firstName} onChange={setEdit('firstName')} />
               <Input label="Nachname" value={editForm.lastName} onChange={setEdit('lastName')} />
@@ -211,18 +211,18 @@ function EmployeesTab() {
             </div>
           </div>
         ) : (
-          <div key={emp.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div key={emp.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
             <div>
-              <div className="font-medium text-sm text-gray-900">{emp.firstName} {emp.lastName}</div>
-              <div className="text-xs text-gray-500">{ROLE_OPTIONS.find(r => r.value === emp.role)?.label} · CHF {emp.hourlyRate}/h</div>
+              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{emp.firstName} {emp.lastName}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{ROLE_OPTIONS.find(r => r.value === emp.role)?.label} · CHF {emp.hourlyRate}/h</div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => startEdit(emp)} className="p-1 text-gray-400 hover:text-gray-700">
+              <button onClick={() => startEdit(emp)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                 <Pencil size={14} />
               </button>
               <button
                 onClick={() => updateEmployee(emp.id, { active: !emp.active })}
-                className={`text-xs px-2 py-1 rounded-full ${emp.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                className={`text-xs px-2 py-1 rounded-full ${emp.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
               >
                 {emp.active ? 'Aktiv' : 'Inaktiv'}
               </button>
@@ -231,7 +231,7 @@ function EmployeesTab() {
         )
       ))}
       {adding ? (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <div className="grid grid-cols-2 gap-2">
             <Input label="Vorname" value={form.firstName} onChange={set('firstName')} />
             <Input label="Nachname" value={form.lastName} onChange={set('lastName')} />
@@ -294,18 +294,18 @@ function MachinesTab() {
             </div>
           </div>
         ) : (
-          <div key={m.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div key={m.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
             <div>
-              <div className="font-medium text-sm text-gray-900">{m.name}</div>
-              <div className="text-xs text-gray-500">{m.type}{m.licensePlate ? ` · ${m.licensePlate}` : ''} · CHF {m.hourlyRate}/h</div>
+              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.name}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{m.type}{m.licensePlate ? ` · ${m.licensePlate}` : ''} · CHF {m.hourlyRate}/h</div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700">
+              <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                 <Pencil size={14} />
               </button>
               <button
                 onClick={() => updateMachine(m.id, { active: !m.active })}
-                className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
               >
                 {m.active ? 'Aktiv' : 'Inaktiv'}
               </button>
@@ -314,7 +314,7 @@ function MachinesTab() {
         )
       ))}
       {adding ? (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <Input label="Bezeichnung" value={form.name} onChange={set('name')} placeholder="z.B. Bagger CAT 320" />
           <Input label="Typ" value={form.type} onChange={set('type')} placeholder="z.B. Bagger, Fahrzeug" />
           <Input label="Kennzeichen" value={form.licensePlate} onChange={set('licensePlate')} />
@@ -377,18 +377,18 @@ function MaterialsTab() {
             </div>
           </div>
         ) : (
-          <div key={m.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex items-center justify-between">
+          <div key={m.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
             <div>
-              <div className="font-medium text-sm text-gray-900">{m.name}</div>
-              <div className="text-xs text-gray-500">{m.unit} · CHF {m.unitPrice}{m.category ? ` · ${m.category}` : ''}</div>
+              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.name}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{m.unit} · CHF {m.unitPrice}{m.category ? ` · ${m.category}` : ''}</div>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700">
+              <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
                 <Pencil size={14} />
               </button>
               <button
                 onClick={() => updateMaterial(m.id, { active: !m.active })}
-                className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}
+                className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
               >
                 {m.active ? 'Aktiv' : 'Inaktiv'}
               </button>
@@ -397,7 +397,7 @@ function MaterialsTab() {
         )
       ))}
       {adding ? (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <Input label="Bezeichnung" value={form.name} onChange={set('name')} placeholder="z.B. Beton C25/30" />
           <div className="grid grid-cols-2 gap-2">
             <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={form.unit} onChange={set('unit')} />
@@ -553,15 +553,15 @@ function SyncTab() {
     <div className="space-y-4 mt-2">
 
       {/* ── Auth ─────────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Konto</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Konto</h3>
         {authLoading ? (
-          <p className="text-xs text-gray-400">Laden…</p>
+          <p className="text-xs text-gray-400 dark:text-gray-500">Laden…</p>
         ) : user ? (
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-900">{user.email}</div>
-              <div className="text-xs text-gray-500">Angemeldet</div>
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{user.email}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Angemeldet</div>
             </div>
             <Button size="sm" variant="ghost" onClick={signOut}>
               <LogOut size={14} /> Abmelden
@@ -569,15 +569,15 @@ function SyncTab() {
           </div>
         ) : (
           <div className="space-y-3">
-            <p className="text-xs text-gray-500">
+            <p className="text-xs text-gray-500 dark:text-gray-400">
               Mit einem Supabase-Konto anmelden für sicherere Synchronisierung.
             </p>
             <Input label="E-Mail" type="email" value={authEmail}
               onChange={e => setAuthEmail(e.target.value)} placeholder="name@firma.ch" />
             <Input label="Passwort" type="password" value={authPassword}
               onChange={e => setAuthPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
-            {authError && <div className="p-2 rounded-xl bg-red-50 text-red-700 text-xs">{authError}</div>}
-            {authSuccess && <div className="p-2 rounded-xl bg-green-50 text-green-700 text-xs">{authSuccess}</div>}
+            {authError && <div className="p-2 rounded-xl bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300 text-xs">{authError}</div>}
+            {authSuccess && <div className="p-2 rounded-xl bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs">{authSuccess}</div>}
             <div className="flex gap-2">
               <Button onClick={handleAuthSubmit} loading={authLoading2} className="flex-1">
                 <LogIn size={14} /> {authMode === 'login' ? 'Anmelden' : 'Registrieren'}
@@ -594,16 +594,16 @@ function SyncTab() {
       </div>
 
       {/* ── Cloud-Sync ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-gray-700">Supabase Cloud-Sync</h3>
+          <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Supabase Cloud-Sync</h3>
           {configured && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-medium">
               Verbunden
             </span>
           )}
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Daten in der Cloud sichern und auf mehreren Geräten synchronisieren.
         </p>
         <Input
@@ -620,7 +620,7 @@ function SyncTab() {
         />
 
         {connStatus && (
-          <div className={`p-3 rounded-xl text-xs ${connStatus.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          <div className={`p-3 rounded-xl text-xs ${connStatus.ok ? 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300' : 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300'}`}>
             {connStatus.ok
               ? connStatus.migrated
                 ? '✓ Verbindung erfolgreich – Tabelle vorhanden'
@@ -646,24 +646,24 @@ function SyncTab() {
 
       {/* ── Sync controls ───────────────────────────────────────────────── */}
       {configured && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-          <h3 className="font-semibold text-sm text-gray-700">Synchronisierung</h3>
-          <p className="text-xs text-gray-500">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Synchronisierung</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Sync läuft automatisch alle 5 Minuten wenn online.
           </p>
           <Button className="w-full" variant="outline" loading={syncing} onClick={handleSync}>
             <RefreshCw size={16} /> Jetzt synchronisieren
           </Button>
           {syncing && progress && (
-            <p className="text-xs text-gray-400 text-center animate-pulse">{progress}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center animate-pulse">{progress}</p>
           )}
           {lastPull && !syncing && (
-            <p className="text-xs text-gray-400 text-center">
+            <p className="text-xs text-gray-400 dark:text-gray-500 text-center">
               Letzter Sync: {formatDate(new Date(lastPull))}
             </p>
           )}
           {result && !syncing && (
-            <div className={`p-3 rounded-xl text-xs ${result.errors.length > 0 ? 'bg-red-50 text-red-700' : 'bg-green-50 text-green-700'}`}>
+            <div className={`p-3 rounded-xl text-xs ${result.errors.length > 0 ? 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-300' : 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'}`}>
               {result.errors.length > 0 ? (
                 <div className="space-y-1">
                   <div className="font-medium">Fehler beim Sync:</div>
@@ -678,9 +678,9 @@ function SyncTab() {
       )}
 
       {/* ── Backup ──────────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Lokales Backup</h3>
-        <p className="text-xs text-gray-500">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Lokales Backup</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Alle Daten als JSON exportieren oder ein früheres Backup importieren.
         </p>
         <div className="flex gap-2">
@@ -688,14 +688,14 @@ function SyncTab() {
             <Download size={16} /> Exportieren
           </Button>
           <label className="flex-1">
-            <div className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+            <div className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 dark:border-gray-600 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
               <FolderOpen size={16} /> Importieren
             </div>
             <input type="file" accept=".json,application/json" className="hidden" onChange={handleImport} />
           </label>
         </div>
         {importResult && (
-          <div className={`p-3 rounded-xl text-xs ${importResult.errors.length > 0 ? 'bg-yellow-50 text-yellow-800' : 'bg-green-50 text-green-700'}`}>
+          <div className={`p-3 rounded-xl text-xs ${importResult.errors.length > 0 ? 'bg-yellow-50 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300' : 'bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-300'}`}>
             {importResult.errors.length > 0 ? (
               <div>
                 <div className="font-medium">{importResult.imported} Einträge importiert, {importResult.errors.length} Fehler:</div>
@@ -709,9 +709,9 @@ function SyncTab() {
       </div>
 
       {/* ── CSV Export ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Datenexport (CSV)</h3>
-        <p className="text-xs text-gray-500">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Datenexport (CSV)</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Daten als CSV-Datei für Excel / Buchhaltung exportieren.
         </p>
         <div className="space-y-2">
@@ -729,9 +729,9 @@ function SyncTab() {
 
       {/* ── Benachrichtigungen ──────────────────────────────────────────── */}
       {notifSupported && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-          <h3 className="font-semibold text-sm text-gray-700">Benachrichtigungen</h3>
-          <p className="text-xs text-gray-500">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Benachrichtigungen</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
             Push-Benachrichtigung wenn neue Daten synchronisiert werden.
           </p>
           <Button
@@ -742,7 +742,7 @@ function SyncTab() {
             {notifEnabled ? <><BellOff size={16} /> Deaktivieren</> : <><Bell size={16} /> Benachrichtigungen aktivieren</>}
           </Button>
           {Notification.permission === 'denied' && (
-            <p className="text-xs text-red-600">
+            <p className="text-xs text-red-600 dark:text-red-400">
               Benachrichtigungen sind im Browser blockiert. Bitte in den Browsereinstellungen freigeben.
             </p>
           )}
@@ -750,9 +750,9 @@ function SyncTab() {
       )}
 
       {/* ── SQL migration ────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="font-semibold text-sm text-gray-700">Schritt 1 – SQL Migration</h3>
+          <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Schritt 1 – SQL Migration</h3>
           <button
             onClick={handleCopySQL}
             className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700"
@@ -761,14 +761,14 @@ function SyncTab() {
             {copied ? 'Kopiert!' : 'Kopieren'}
           </button>
         </div>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           Diesen SQL-Code einmalig im Supabase SQL-Editor ausführen:<br />
           <span className="font-medium">Dashboard → SQL Editor → New Query → Einfügen → Run</span>
         </p>
-        <pre className="bg-gray-50 rounded-xl p-3 text-xs text-gray-700 overflow-auto whitespace-pre-wrap font-mono leading-relaxed">
+        <pre className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3 text-xs text-gray-700 dark:text-gray-300 overflow-auto whitespace-pre-wrap font-mono leading-relaxed">
           {SUPABASE_SQL}
         </pre>
-        <p className="text-xs text-gray-500">
+        <p className="text-xs text-gray-500 dark:text-gray-400">
           <span className="font-medium">Schritt 2</span> – URL + Anon Key aus{' '}
           <span className="font-medium">Settings → API</span> kopieren und oben einfügen.
         </p>

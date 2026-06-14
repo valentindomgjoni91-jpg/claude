@@ -222,7 +222,7 @@ export default function Archive() {
               placeholder="Titel, Datum, Projekt oder Kunde…"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white"
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500"
             />
           </div>
           <button
@@ -269,9 +269,9 @@ export default function Archive() {
 
         {/* Extended Filters */}
         {showFilters && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-semibold text-gray-700">Filter</span>
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Filter</span>
               {activeFilterCount > 0 && (
                 <button onClick={clearFilters} className="text-xs text-red-500 flex items-center gap-1">
                   <X size={12} /> Zurücksetzen
@@ -373,29 +373,29 @@ function ReportCard({ report, projectName, onPreview }: {
   const { variant, label } = statusMap[report.status] ?? { variant: 'gray', label: report.status };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
       <button
         onClick={onPreview}
         className="w-full px-4 py-3.5 flex items-start gap-3 text-left"
       >
         <div className={cn(
           'w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5',
-          isDaily ? 'bg-primary-50' : 'bg-orange-50'
+          isDaily ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-orange-50 dark:bg-orange-900/30'
         )}>
           {isDaily
-            ? <Calendar size={16} className="text-primary-600" />
-            : <FileText size={16} className="text-orange-600" />
+            ? <Calendar size={16} className="text-primary-600 dark:text-primary-400" />
+            : <FileText size={16} className="text-orange-600 dark:text-orange-400" />
           }
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <span className="font-semibold text-sm text-gray-900 leading-tight truncate">{report.title}</span>
+            <span className="font-semibold text-sm text-gray-900 dark:text-gray-100 leading-tight truncate">{report.title}</span>
             <Badge variant={variant} className="flex-shrink-0 text-[11px]">{label}</Badge>
           </div>
-          <div className="text-xs text-gray-500 mt-0.5">{formatDate(report.date)}</div>
-          {projectName && <div className="text-xs text-gray-400 truncate">{projectName}</div>}
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{formatDate(report.date)}</div>
+          {projectName && <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{projectName}</div>}
         </div>
-        <ChevronRight size={16} className="text-gray-300 flex-shrink-0 mt-1" />
+        <ChevronRight size={16} className="text-gray-300 dark:text-gray-600 flex-shrink-0 mt-1" />
       </button>
     </div>
   );
@@ -426,21 +426,21 @@ function ReportPreviewSheet({ data, projectName, onClose, onOpen, onPdf, onDupli
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center">
       <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-2xl bg-white rounded-t-3xl shadow-2xl">
+      <div className="relative w-full max-w-2xl bg-white dark:bg-gray-900 rounded-t-3xl shadow-2xl">
         {/* Handle */}
         <div className="flex justify-center pt-3 pb-1">
-          <div className="w-10 h-1 bg-gray-300 rounded-full" />
+          <div className="w-10 h-1 bg-gray-300 dark:bg-gray-600 rounded-full" />
         </div>
 
         {/* Header */}
-        <div className="px-5 pt-2 pb-4 border-b border-gray-100">
+        <div className="px-5 pt-2 pb-4 border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-start justify-between gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-gray-400 mb-0.5">
+              <p className="text-xs text-gray-400 dark:text-gray-500 mb-0.5">
                 {isDaily ? 'Tagesrapport' : 'Regierapport'} · {formatDate(report.date)}
               </p>
-              <h2 className="font-bold text-gray-900 text-base leading-tight">{report.title}</h2>
-              {projectName && <p className="text-sm text-gray-500 mt-0.5">{projectName}</p>}
+              <h2 className="font-bold text-gray-900 dark:text-gray-100 text-base leading-tight">{report.title}</h2>
+              {projectName && <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{projectName}</p>}
             </div>
             <Badge variant={variant}>{label}</Badge>
           </div>
@@ -449,29 +449,29 @@ function ReportPreviewSheet({ data, projectName, onClose, onOpen, onPdf, onDupli
         {/* Stats */}
         <div className="px-5 py-4 grid grid-cols-2 gap-3">
           {totalHours !== undefined && totalHours > 0 && (
-            <div className="bg-primary-50 rounded-xl p-3">
-              <div className="text-xs text-primary-600 font-medium mb-0.5">Arbeitsstunden</div>
-              <div className="font-bold text-primary-900">{formatHours(totalHours)}</div>
+            <div className="bg-primary-50 dark:bg-primary-900/30 rounded-xl p-3">
+              <div className="text-xs text-primary-600 dark:text-primary-400 font-medium mb-0.5">Arbeitsstunden</div>
+              <div className="font-bold text-primary-900 dark:text-primary-300">{formatHours(totalHours)}</div>
             </div>
           )}
           {totalCost !== undefined && totalCost > 0 && (
-            <div className="bg-green-50 rounded-xl p-3">
-              <div className="text-xs text-green-600 font-medium mb-0.5">
+            <div className="bg-green-50 dark:bg-green-900/30 rounded-xl p-3">
+              <div className="text-xs text-green-600 dark:text-green-400 font-medium mb-0.5">
                 {isDaily ? 'Material + Maschinen' : 'Gesamtbetrag'}
               </div>
-              <div className="font-bold text-green-900">{formatCurrency(totalCost)}</div>
+              <div className="font-bold text-green-900 dark:text-green-300">{formatCurrency(totalCost)}</div>
             </div>
           )}
           {photoCount !== undefined && photoCount > 0 && (
-            <div className="bg-gray-50 rounded-xl p-3">
-              <div className="text-xs text-gray-500 font-medium mb-0.5">Fotos</div>
-              <div className="font-bold text-gray-700">{photoCount}</div>
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-3">
+              <div className="text-xs text-gray-500 dark:text-gray-400 font-medium mb-0.5">Fotos</div>
+              <div className="font-bold text-gray-700 dark:text-gray-200">{photoCount}</div>
             </div>
           )}
           {positionCount !== undefined && (
-            <div className="bg-orange-50 rounded-xl p-3">
-              <div className="text-xs text-orange-600 font-medium mb-0.5">Positionen</div>
-              <div className="font-bold text-orange-900">{positionCount}</div>
+            <div className="bg-orange-50 dark:bg-orange-900/30 rounded-xl p-3">
+              <div className="text-xs text-orange-600 dark:text-orange-400 font-medium mb-0.5">Positionen</div>
+              <div className="font-bold text-orange-900 dark:text-orange-300">{positionCount}</div>
             </div>
           )}
         </div>

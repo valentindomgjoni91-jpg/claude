@@ -62,8 +62,8 @@ export default function ProjectDetail() {
     ]);
 
     const totalHours = timeEntries.reduce((sum, e) => sum + e.totalHours, 0);
-    const totalMaterialCost = materialEntries.reduce((sum, e) => sum + (e.quantity ?? 0) * (e.unitPrice ?? 0), 0);
-    const totalMachineCost = machineEntries.reduce((sum, e) => sum + (e.hours ?? 0) * (e.hourlyRate ?? 0), 0);
+    const totalMaterialCost = materialEntries.reduce((sum, e) => sum + e.total, 0);
+    const totalMachineCost = machineEntries.reduce((sum, e) => sum + e.total, 0);
     const totalSubCost = subEntries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
     const regiTotal = regiPositions.reduce((sum, p) => sum + (p.total ?? 0), 0);
 
@@ -94,7 +94,7 @@ export default function ProjectDetail() {
     pdf.save(`Projektbericht_${project.title.replace(/\s+/g, '_')}.pdf`);
   };
 
-  if (!project) return <div className="p-4 text-gray-500">Projekt nicht gefunden.</div>;
+  if (!project) return <div className="p-4 text-gray-500 dark:text-gray-400">Projekt nicht gefunden.</div>;
 
   const progressPercent = (() => {
     if (!project.startDate || !project.endDate) return null;
@@ -120,35 +120,35 @@ export default function ProjectDetail() {
 
       <div className="px-4 py-4 space-y-4">
         {/* Project Info */}
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <h3 className="font-semibold text-gray-900">{project.title}</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100">{project.title}</h3>
             <ProjectBadge status={project.status} />
           </div>
           <div className="space-y-2">
-            <div className="flex items-start gap-2 text-sm text-gray-600">
-              <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400" />
+            <div className="flex items-start gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <MapPin size={14} className="mt-0.5 flex-shrink-0 text-gray-400 dark:text-gray-500" />
               <span>{project.siteAddress}</span>
             </div>
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <User size={14} className="flex-shrink-0 text-gray-400" />
+            <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+              <User size={14} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
               <span>{project.clientName}</span>
             </div>
             {project.clientContact && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Phone size={14} className="flex-shrink-0 text-gray-400" />
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <Phone size={14} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
                 <span>{project.clientContact}</span>
               </div>
             )}
             {project.startDate && (
-              <div className="flex items-center gap-2 text-sm text-gray-600">
-                <Calendar size={14} className="flex-shrink-0 text-gray-400" />
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-300">
+                <Calendar size={14} className="flex-shrink-0 text-gray-400 dark:text-gray-500" />
                 <span>Start: {formatDate(project.startDate)}</span>
               </div>
             )}
           </div>
           {project.description && (
-            <p className="text-sm text-gray-500 bg-gray-50 rounded-xl p-3">{project.description}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 rounded-xl p-3">{project.description}</p>
           )}
         </div>
 
@@ -181,10 +181,10 @@ export default function ProjectDetail() {
 
         {/* Project Statistics */}
         {projectStats && (
-          <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
             <div className="flex items-center gap-2">
               <TrendingUp size={14} className="text-primary-500" />
-              <h3 className="font-semibold text-sm text-gray-900">Projektstatistik</h3>
+              <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Projektstatistik</h3>
             </div>
             <div className="grid grid-cols-3 gap-3">
               <div className="text-center">
@@ -192,19 +192,19 @@ export default function ProjectDetail() {
                   <Clock size={12} />
                   <span className="text-lg font-bold">{formatHours(projectStats.totalHours)}</span>
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">Stunden</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Stunden</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-emerald-600">
                   {formatCurrency(projectStats.totalMaterialCost)}
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">Material</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Material</div>
               </div>
               <div className="text-center">
                 <div className="text-lg font-bold text-orange-600">
                   {formatCurrency(projectStats.totalMachineCost)}
                 </div>
-                <div className="text-xs text-gray-500 mt-0.5">Maschinen</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Maschinen</div>
               </div>
             </div>
             {project.budget && project.budget > 0 && projectStats && (() => {
@@ -252,9 +252,9 @@ export default function ProjectDetail() {
         )}
 
         {/* Daily Reports */}
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
-            <h3 className="font-semibold text-sm text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
               Tagesrapporte ({dailyReports?.length ?? 0})
             </h3>
             <Button
@@ -272,12 +272,12 @@ export default function ProjectDetail() {
             <button
               key={r.id}
               onClick={() => navigate(`/tagesrapport/${r.id}`)}
-              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 text-left"
+              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
             >
               <Calendar size={16} className="text-primary-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{r.title}</div>
-                <div className="text-xs text-gray-500">{formatDate(r.date)}</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(r.date)}</div>
               </div>
               <div className="flex items-center gap-1">
                 {r.status === 'completed'
@@ -291,9 +291,9 @@ export default function ProjectDetail() {
         </div>
 
         {/* Regi Reports */}
-        <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
-            <h3 className="font-semibold text-sm text-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
               Regierapporte ({regiReports?.length ?? 0})
             </h3>
             <Button
@@ -311,12 +311,12 @@ export default function ProjectDetail() {
             <button
               key={r.id}
               onClick={() => navigate(`/regierapport/${r.id}`)}
-              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 text-left"
+              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
             >
               <FileText size={16} className="text-orange-500 flex-shrink-0" />
               <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 truncate">{r.title}</div>
-                <div className="text-xs text-gray-500">{formatDate(r.date)}</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(r.date)}</div>
               </div>
               <div className="flex items-center gap-1">
                 <Badge variant={r.status === 'signed' ? 'success' : r.status === 'invoiced' ? 'info' : 'warning'}>

@@ -97,8 +97,8 @@ export default function Dashboard() {
     <div className="px-4 py-4 space-y-4">
       {/* Greeting */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Guten Tag 👷</h2>
-        <p className="text-sm text-gray-500">{formatDate(today)}</p>
+        <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Guten Tag 👷</h2>
+        <p className="text-sm text-gray-500 dark:text-gray-400">{formatDate(today)}</p>
       </div>
 
       {/* Quick Stats */}
@@ -229,19 +229,19 @@ export default function Dashboard() {
           <button
             key={`${r.type}-${r.id}`}
             onClick={() => navigate(r.type === 'daily' ? `/tagesrapport/${r.id}` : `/regierapport/${r.id}`)}
-            className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 last:border-0 hover:bg-gray-50 active:bg-gray-100 transition-colors text-left"
+            className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600 transition-colors text-left"
           >
             <div className={`w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${
-              r.type === 'daily' ? 'bg-primary-50' : 'bg-orange-50'
+              r.type === 'daily' ? 'bg-primary-50 dark:bg-primary-900/30' : 'bg-orange-50 dark:bg-orange-900/30'
             }`}>
               {r.type === 'daily'
-                ? <Calendar size={16} className="text-primary-600" />
-                : <FileText size={16} className="text-orange-600" />
+                ? <Calendar size={16} className="text-primary-600 dark:text-primary-400" />
+                : <FileText size={16} className="text-orange-600 dark:text-orange-400" />
               }
             </div>
             <div className="flex-1 min-w-0">
-              <div className="font-medium text-sm text-gray-900 truncate">{r.title}</div>
-              <div className="text-xs text-gray-500 flex items-center gap-1">
+              <div className="font-medium text-sm text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1">
                 <span>{formatDate(r.date)}</span>
                 {projectMap && projectMap[r.projectId] && (
                   <span className="truncate">· {projectMap[r.projectId]}</span>
@@ -250,7 +250,7 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2">
               <StatusBadge status={r.status} />
-              <ChevronRight size={16} className="text-gray-400" />
+              <ChevronRight size={16} className="text-gray-400 dark:text-gray-500" />
             </div>
           </button>
         ))}

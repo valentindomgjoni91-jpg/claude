@@ -145,7 +145,7 @@ function TimerTab() {
     <div className="space-y-4">
       {/* Timer */}
       <Card>
-        <h3 className="font-semibold text-gray-900 mb-4">Stoppuhr</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-4">Stoppuhr</h3>
         <div className="space-y-3">
           <Select
             label="Mitarbeiter"
@@ -170,7 +170,7 @@ function TimerTab() {
               {formatElapsed(elapsed)}
             </div>
             {running && (
-              <div className="text-sm text-gray-500 mt-1">Gestartet: {startTime}</div>
+              <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">Gestartet: {startTime}</div>
             )}
           </div>
 
@@ -211,15 +211,15 @@ function TimerTab() {
       {/* Today's entries */}
       {(todayEntries?.length ?? 0) > 0 && (
         <Card padding="none">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h3 className="font-semibold text-sm text-gray-900">Heutige Einträge</h3>
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Heutige Einträge</h3>
           </div>
           {todayEntries?.map(entry => (
-            <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
+            <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 dark:border-gray-700 last:border-0">
               <div>
-                <div className="text-sm font-medium text-gray-900">{employeeMap[entry.employeeId] || entry.employeeId}</div>
-                <div className="text-xs text-gray-500">{entry.startTime} – {entry.endTime} · Pause: {entry.breakMinutes} min</div>
-                {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{employeeMap[entry.employeeId] || entry.employeeId}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{entry.startTime} – {entry.endTime} · Pause: {entry.breakMinutes} min</div>
+                {entry.activity && <div className="text-xs text-gray-400 dark:text-gray-500">{entry.activity}</div>}
               </div>
               <div className="flex items-center gap-2">
                 <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
@@ -235,7 +235,7 @@ function TimerTab() {
       {/* Manual entry */}
       {showManual ? (
         <Card>
-          <h3 className="font-semibold text-sm text-gray-900 mb-3">Manuelle Erfassung</h3>
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100 mb-3">Manuelle Erfassung</h3>
           <div className="space-y-3">
             <Select label="Mitarbeiter" value={manualForm.employeeId} onChange={e => setManualForm(f => ({ ...f, employeeId: e.target.value }))} options={employeeOptions} placeholder="Wählen…" />
             <Input label="Datum" type="date" value={manualForm.date} onChange={e => setManualForm(f => ({ ...f, date: e.target.value }))} />
@@ -244,7 +244,7 @@ function TimerTab() {
               <Input label="Bis" type="time" value={manualForm.endTime} onChange={e => setManualForm(f => ({ ...f, endTime: e.target.value }))} />
               <Input label="Pause" type="number" value={manualForm.breakMinutes} onChange={e => setManualForm(f => ({ ...f, breakMinutes: e.target.value }))} />
             </div>
-            <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+            <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
               Total: <strong>{formatHours(calcTotalHours(manualForm.startTime, manualForm.endTime, Number(manualForm.breakMinutes)))}</strong>
             </div>
             <Input label="Tätigkeit" value={manualForm.activity} onChange={e => setManualForm(f => ({ ...f, activity: e.target.value }))} placeholder="z.B. Mauerwerk" />
@@ -309,22 +309,22 @@ function WeekTab() {
       <div className="flex items-center justify-between">
         <button
           onClick={() => setWeekOffset(o => o - 1)}
-          className="p-2 rounded-xl hover:bg-gray-100"
+          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700"
         >
           <ChevronLeft size={20} />
         </button>
         <div className="text-center">
-          <div className="font-semibold text-gray-900 text-sm">
+          <div className="font-semibold text-gray-900 dark:text-gray-100 text-sm">
             {isCurrentWeek ? 'Diese Woche' : format(weekStart, "'KW' w", { locale: de })}
           </div>
-          <div className="text-xs text-gray-500">
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             {format(weekStart, 'dd.MM', { locale: de })} – {format(weekEnd, 'dd.MM.yyyy', { locale: de })}
           </div>
         </div>
         <button
           onClick={() => setWeekOffset(o => Math.min(0, o + 1))}
           disabled={weekOffset === 0}
-          className="p-2 rounded-xl hover:bg-gray-100 disabled:opacity-30"
+          className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-30"
         >
           <ChevronRight size={20} />
         </button>
@@ -340,13 +340,13 @@ function WeekTab() {
       />
 
       {/* Wochentotal + Soll/Ist */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
         <div className="flex justify-between items-start mb-3">
           <div>
-            <div className="text-sm text-gray-500">Ist / Soll</div>
-            <div className="text-2xl font-bold text-gray-900">
+            <div className="text-sm text-gray-500 dark:text-gray-400">Ist / Soll</div>
+            <div className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               {formatHours(weekTotal)}
-              <span className="text-sm text-gray-400 font-normal"> / {formatHours(weekTarget)}</span>
+              <span className="text-sm text-gray-400 dark:text-gray-500 font-normal"> / {formatHours(weekTarget)}</span>
             </div>
           </div>
           <div className={cn(
@@ -366,7 +366,7 @@ function WeekTab() {
 
       {/* Daily bars */}
       <Card>
-        <h3 className="font-semibold text-sm text-gray-700 mb-3">Tagesübersicht</h3>
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200 mb-3">Tagesübersicht</h3>
         <div className="space-y-2">
           {entriesByDay.map(({ day, dayStr, dayTotal }) => {
             const isToday = dayStr === todayISO();
@@ -403,23 +403,23 @@ function WeekTab() {
       {/* Entry list */}
       {filteredEntries.length > 0 && (
         <Card padding="none">
-          <div className="px-4 py-3 border-b border-gray-100">
-            <h3 className="font-semibold text-sm text-gray-900">Alle Einträge</h3>
+          <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-700">
+            <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Alle Einträge</h3>
           </div>
           {entriesByDay.map(({ dayStr, dayEntries, dayTotal }) => {
             if (dayEntries.length === 0) return null;
             return (
               <div key={dayStr}>
-                <div className="px-4 py-2 bg-gray-50 border-b border-gray-100 flex justify-between">
-                  <span className="text-xs font-semibold text-gray-600">{formatDate(dayStr)}</span>
-                  <span className="text-xs font-bold text-gray-700">{formatHours(dayTotal)}</span>
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600 flex justify-between">
+                  <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{formatDate(dayStr)}</span>
+                  <span className="text-xs font-bold text-gray-700 dark:text-gray-200">{formatHours(dayTotal)}</span>
                 </div>
                 {dayEntries.map(entry => (
-                  <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 last:border-0">
+                  <div key={entry.id} className="px-4 py-3 flex items-center justify-between border-b border-gray-50 dark:border-gray-700 last:border-0">
                     <div>
-                      <div className="text-sm font-medium text-gray-900">{employeeMap[entry.employeeId] || '—'}</div>
-                      <div className="text-xs text-gray-500">{entry.startTime} – {entry.endTime}</div>
-                      {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
+                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{employeeMap[entry.employeeId] || '—'}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">{entry.startTime} – {entry.endTime}</div>
+                      {entry.activity && <div className="text-xs text-gray-400 dark:text-gray-500">{entry.activity}</div>}
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
@@ -492,11 +492,11 @@ function ProjectsTab() {
       </div>
 
       {rows.map(({ project, hours }) => (
-        <div key={project.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3">
+        <div key={project.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3">
           <div className="flex justify-between items-start mb-2">
             <div>
-              <div className="font-medium text-sm text-gray-900">{project.title}</div>
-              <div className="text-xs text-gray-500">{project.clientName}</div>
+              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{project.title}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{project.clientName}</div>
             </div>
             <span className="font-bold text-primary-700">{formatHours(hours)}</span>
           </div>
@@ -512,9 +512,9 @@ function ProjectsTab() {
       ))}
 
       {(data?.unlinked ?? 0) > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-100 px-4 py-3 opacity-60">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 opacity-60">
           <div className="flex justify-between items-center">
-            <div className="text-sm text-gray-500">Ohne Projekt (Stoppuhr / manuell)</div>
+            <div className="text-sm text-gray-500 dark:text-gray-400">Ohne Projekt (Stoppuhr / manuell)</div>
             <span className="font-bold text-gray-500">{formatHours(data!.unlinked)}</span>
           </div>
         </div>
@@ -602,8 +602,8 @@ function TimesheetTab() {
 
   return (
     <div className="space-y-4 mt-2">
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Stundenzettel erstellen</h3>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Stundenzettel erstellen</h3>
         <Select
           label="Mitarbeiter"
           options={employeeOptions}
@@ -620,13 +620,13 @@ function TimesheetTab() {
       </div>
 
       {preview && selectedEmp && (
-        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
           <div className="flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium text-gray-900">
+              <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                 {preview.entries.length} Einträge
               </div>
-              <div className="text-xs text-gray-500">
+              <div className="text-xs text-gray-500 dark:text-gray-400">
                 Total: {formatHours(preview.totalHours)}
               </div>
             </div>
@@ -638,12 +638,12 @@ function TimesheetTab() {
           {preview.entries.length > 0 && (
             <div className="space-y-1 max-h-64 overflow-y-auto">
               {preview.entries.map((e, i) => (
-                <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-50 dark:border-gray-700 last:border-0">
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs font-medium text-gray-900">{formatDate(e.date)}</div>
-                    <div className="text-xs text-gray-400 truncate">{e.projectTitle}</div>
+                    <div className="text-xs font-medium text-gray-900 dark:text-gray-100">{formatDate(e.date)}</div>
+                    <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{e.projectTitle}</div>
                   </div>
-                  <div className="text-xs font-semibold text-gray-700 ml-2">{formatHours(e.totalHours)}</div>
+                  <div className="text-xs font-semibold text-gray-700 dark:text-gray-300 ml-2">{formatHours(e.totalHours)}</div>
                 </div>
               ))}
             </div>

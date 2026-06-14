@@ -267,14 +267,14 @@ export default function RegiReportForm() {
       <div className="px-4 pb-24 space-y-4">
         {activeTab === 'info' && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
               <Select label="Projekt *" value={form.projectId} onChange={set('projectId')} options={projectOptions} placeholder="Projekt wählen…" />
               <Input label="Datum" type="date" value={form.date} onChange={set('date')} />
               <Input label="Titel" value={form.title} onChange={set('title')} />
               <Input label="MWST %" type="number" value={form.vatRate} onChange={set('vatRate')} />
             </div>
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-              <h3 className="font-semibold text-sm text-gray-700">Regiekonditionen</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Regiekonditionen</h3>
               <Textarea
                 value={form.laborConditions}
                 onChange={set('laborConditions')}
@@ -305,48 +305,48 @@ export default function RegiReportForm() {
         {activeTab === 'summary' && (
           <div className="space-y-4">
             {/* Totals summary */}
-            <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 border-b border-gray-100">
-                <h3 className="font-semibold text-sm text-gray-700">Zusammenfassung</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+              <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
+                <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Zusammenfassung</h3>
               </div>
               {Object.entries(positionsByType).map(([type, pos]) => {
                 const typeLabels: Record<string, string> = { labor: 'Arbeit', material: 'Material', machine: 'Maschinen', extra: 'Zusatz' };
                 const subtotal = (pos as any[])?.reduce((s: number, p: any) => s + p.total, 0) ?? 0;
                 if (!pos || (pos as any[]).length === 0) return null;
                 return (
-                  <div key={type} className="px-4 py-2.5 flex justify-between border-b border-gray-50">
-                    <span className="text-sm text-gray-600">{typeLabels[type]}</span>
+                  <div key={type} className="px-4 py-2.5 flex justify-between border-b border-gray-50 dark:border-gray-700">
+                    <span className="text-sm text-gray-600 dark:text-gray-300">{typeLabels[type]}</span>
                     <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
                   </div>
                 );
               })}
-              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100">
-                <span className="text-sm font-semibold text-gray-800">Nettototal</span>
+              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100 dark:border-gray-700">
+                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Nettototal</span>
                 <span className="text-sm font-semibold">{formatCurrency(netTotal)}</span>
               </div>
-              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100">
-                <span className="text-sm text-gray-600">MWST {form.vatRate}%</span>
+              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-300">MWST {form.vatRate}%</span>
                 <span className="text-sm">{formatCurrency(vatAmount)}</span>
               </div>
-              <div className="px-4 py-3 flex justify-between bg-primary-50">
+              <div className="px-4 py-3 flex justify-between bg-primary-50 dark:bg-primary-900/30">
                 <span className="font-bold text-primary-900">Gesamttotal</span>
                 <span className="font-bold text-xl text-primary-900">{formatCurrency(grossTotal)}</span>
               </div>
             </div>
 
             {/* Signature */}
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-              <h3 className="font-semibold text-sm text-gray-700">Kundenbestätigung</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Kundenbestätigung</h3>
               {report?.customerSignature ? (
                 <div className="space-y-2">
-                  <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
                     <img
                       src={report.customerSignature}
                       alt="Unterschrift"
                       className="max-h-20 w-auto"
                     />
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Unterzeichnet von <strong>{report.customerName}</strong>
                   </p>
                   <Badge variant="success">Signiert</Badge>
@@ -397,10 +397,10 @@ export default function RegiReportForm() {
       {/* Signature Modal */}
       <Modal open={sigModalOpen} onClose={() => setSigModalOpen(false)} title="Kundenunterschrift" size="lg">
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Ich bestätige die korrekte Ausführung der aufgeführten Arbeiten und Leistungen.
           </p>
-          <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50">
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800">
             <SignatureCanvas
               ref={sigRef}
               canvasProps={{
@@ -537,19 +537,19 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
         if (group.items.length === 0) return null;
         const subtotal = group.items.reduce((s: number, p: any) => s + p.total, 0);
         return (
-          <div key={group.value} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-            <div className="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex justify-between">
-              <span className="text-sm font-semibold text-gray-700">{group.label}</span>
-              <span className="text-sm font-bold text-gray-900">{formatCurrency(subtotal)}</span>
+          <div key={group.value} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+            <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-700 flex justify-between">
+              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{group.label}</span>
+              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(subtotal)}</span>
             </div>
             {group.items.map((pos: any, i: number) => (
-              <div key={pos.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 last:border-0">
+              <div key={pos.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 dark:border-gray-700 last:border-0">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="text-xs text-gray-400 font-mono">{i + 1}.</span>
-                    <span className="text-sm text-gray-900">{pos.description}</span>
+                    <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
                   </div>
-                  <div className="text-xs text-gray-500 ml-5">{pos.quantity} {pos.unit} × {formatCurrency(pos.unitPrice)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 ml-5">{pos.quantity} {pos.unit} × {formatCurrency(pos.unitPrice)}</div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="font-bold text-sm">{formatCurrency(pos.total)}</span>
@@ -564,7 +564,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
       })}
 
       {adding && (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Position hinzufügen</h4>
           <Select label="Typ" options={POSITION_TYPES} value={form.type} onChange={set('type')} />
           {form.type === 'material' && materials.length > 0 && (
@@ -591,7 +591,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
             <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={form.unit} onChange={set('unit')} />
             <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />
           </div>
-          <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+          <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
             Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
           </div>
           <div className="flex gap-2">
@@ -673,7 +673,7 @@ function RegiPhotosTab({ photos, onEnsureReport }: {
       </Button>
       <div className="grid grid-cols-2 gap-2">
         {photos.map(photo => (
-          <div key={photo.id} className="rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+          <div key={photo.id} className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
             <div className="relative">
               <img src={photo.dataUrl} alt="Foto" className="w-full aspect-video object-cover" />
               <button
@@ -694,7 +694,7 @@ function RegiPhotosTab({ photos, onEnsureReport }: {
               )}
             </div>
             <div className="p-2">
-              <p className="text-xs text-gray-500 truncate">{photo.note || 'Kein Kommentar'}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{photo.note || 'Kein Kommentar'}</p>
             </div>
           </div>
         ))}

@@ -206,8 +206,7 @@ export default function DailyReportForm() {
         companyName: result.company?.name || '',
         totalHours: totalHours_,
         totalMaterialCost: totalMat_,
-        recipientEmail: result.proj.clientContact?.match(/[\w.+-]+@[\w.-]+\.\w+/)?.[0],
-      } as any),
+      }),
       recipientEmail: result.proj.clientContact?.match(/[\w.+-]+@[\w.-]+\.\w+/)?.[0],
     });
   };
@@ -310,21 +309,21 @@ export default function DailyReportForm() {
         )}
         {activeTab === 'signature' && (
           <div className="space-y-4">
-            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-              <h3 className="font-semibold text-sm text-gray-700">Kundenbestätigung</h3>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Kundenbestätigung</h3>
               {report?.customerSignature ? (
                 <div className="space-y-3">
                   <div className="bg-gray-50 rounded-xl p-3">
                     <img src={report.customerSignature} alt="Unterschrift" className="max-h-24 w-auto" />
                   </div>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Unterzeichnet von <strong>{report.customerName}</strong>
                   </p>
                   <Badge variant="success">Unterschrift vorhanden</Badge>
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <p className="text-xs text-gray-500">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
                     Kunde bestätigt die ausgeführten Arbeiten mit Unterschrift.
                   </p>
                   <Input
@@ -369,10 +368,10 @@ export default function DailyReportForm() {
       {/* Signature Modal */}
       <Modal open={sigModalOpen} onClose={() => setSigModalOpen(false)} title="Kundenunterschrift" size="lg">
         <div className="space-y-4">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 dark:text-gray-300">
             Ich bestätige die korrekte Ausführung der aufgeführten Arbeiten.
           </p>
-          <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50">
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-gray-50 dark:bg-gray-800">
             <SignatureCanvas
               ref={sigRef}
               canvasProps={{
@@ -442,12 +441,12 @@ interface InfoTabProps {
 function InfoTab({ form, set, projectOptions }: InfoTabProps) {
   return (
     <div className="space-y-4">
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
         <Select label="Projekt *" value={form.projectId} onChange={set('projectId')} options={projectOptions} placeholder="Projekt wählen…" />
         <Input label="Datum" type="date" value={form.date} onChange={set('date')} />
         <Input label="Titel" value={form.title} onChange={set('title')} />
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
         <h3 className="text-sm font-semibold text-gray-700">Wetter</h3>
         <div className="grid grid-cols-3 gap-2">
           {Object.entries(WEATHER_LABELS).map(([value, label]) => (
@@ -467,7 +466,7 @@ function InfoTab({ form, set, projectOptions }: InfoTabProps) {
         </div>
         <Input label="Temperatur (°C)" type="number" value={form.temperature} onChange={set('temperature')} placeholder="z.B. 18" />
       </div>
-      <div className="bg-white rounded-2xl border border-gray-100 p-4">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
         <Textarea label="Notizen / Bemerkungen" value={form.notes} onChange={set('notes')} rows={4} />
       </div>
     </div>
@@ -531,8 +530,8 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
       ))}
 
       {adding && (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
-          <h4 className="font-semibold text-sm text-gray-900">Neuer Zeiteintrag</h4>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
+          <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Neuer Zeiteintrag</h4>
           <Select label="Mitarbeiter" value={form.employeeId} onChange={set('employeeId')} options={employeeOptions} placeholder="Mitarbeiter wählen" />
           <div className="grid grid-cols-3 gap-2">
             <Input label="Von" type="time" value={form.startTime} onChange={set('startTime')} />
@@ -540,7 +539,7 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
             <Input label="Pause (min)" type="number" value={form.breakMinutes} onChange={set('breakMinutes')} />
           </div>
           {form.startTime && form.endTime && (
-            <div className="text-sm text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
+            <div className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
               Total: <strong>{formatHours(calcTotalHours(form.startTime, form.endTime, Number(form.breakMinutes)))}</strong>
             </div>
           )}
@@ -585,28 +584,28 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: any; employeeOptions
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-      <div className="px-4 py-3 flex items-center justify-between">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+      <div className="px-4 py-3 flex items-center justify-between dark:border-gray-700">
         <div>
-          <div className="font-semibold text-sm text-gray-900">{employeeName}</div>
-          <div className="text-xs text-gray-500">
+          <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{employeeName}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
             {entry.startTime} – {entry.endTime} · Pause: {entry.breakMinutes} min
           </div>
-          {entry.activity && <div className="text-xs text-gray-400">{entry.activity}</div>}
-          {entry.note && <div className="text-xs text-gray-400 italic">{entry.note}</div>}
+          {entry.activity && <div className="text-xs text-gray-400 dark:text-gray-500">{entry.activity}</div>}
+          {entry.note && <div className="text-xs text-gray-400 dark:text-gray-500 italic">{entry.note}</div>}
         </div>
         <div className="flex items-center gap-2">
           <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
-          <button onClick={() => setEditing(!editing)} className="p-1.5 rounded-lg hover:bg-gray-100">
+          <button onClick={() => setEditing(!editing)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             {editing ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
-          <button onClick={() => deleteTimeEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+          <button onClick={() => deleteTimeEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400">
             <Trash2 size={14} />
           </button>
         </div>
       </div>
       {editing && (
-        <div className="border-t border-gray-100 px-4 py-3 space-y-3 bg-gray-50">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-3 bg-gray-50 dark:bg-gray-700">
           <div className="grid grid-cols-3 gap-2">
             <Input label="Von" type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} />
             <Input label="Bis" type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} />
@@ -668,22 +667,22 @@ function MaterialTab({ entries, materialOptions, materials, onEnsureReport, tota
         </div>
       )}
       {entries.map((entry: any) => (
-        <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex justify-between items-start">
+        <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex justify-between items-start">
           <div className="flex-1 min-w-0 pr-3">
-            <div className="font-medium text-sm text-gray-900">{entry.description}</div>
-            <div className="text-xs text-gray-500">{entry.quantity} {entry.unit} × {formatCurrency(entry.unitPrice)}</div>
-            {entry.note && <div className="text-xs text-gray-400 italic">{entry.note}</div>}
+            <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{entry.description}</div>
+            <div className="text-xs text-gray-500 dark:text-gray-400">{entry.quantity} {entry.unit} × {formatCurrency(entry.unitPrice)}</div>
+            {entry.note && <div className="text-xs text-gray-400 dark:text-gray-500 italic">{entry.note}</div>}
           </div>
           <div className="flex items-center gap-2">
             <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(entry.total)}</span>
-            <button onClick={() => deleteMaterialEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+            <button onClick={() => deleteMaterialEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400">
               <Trash2 size={14} />
             </button>
           </div>
         </div>
       ))}
       {adding && (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Material hinzufügen</h4>
           {materialOptions.length > 0 && (
             <Select label="Aus Stammdaten" options={materialOptions} placeholder="Wählen oder manuell eingeben…" onChange={handleMaterialSelect} value={form.materialId} />
@@ -694,7 +693,7 @@ function MaterialTab({ entries, materialOptions, materials, onEnsureReport, tota
             <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={form.unit} onChange={set('unit')} />
             <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />
           </div>
-          <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+          <div className="text-sm bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
             Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
           </div>
           <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Optional" />
@@ -762,16 +761,16 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
       {entries.map((entry: any) => {
         const opName = employeeOptions.find((e: any) => e.value === entry.operatorId)?.label;
         return (
-          <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 px-4 py-3 flex justify-between items-start">
+          <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-3">
-              <div className="font-medium text-sm text-gray-900">{entry.description}</div>
-              <div className="text-xs text-gray-500">{entry.hours}h × {formatCurrency(entry.hourlyRate)}/h</div>
-              {opName && <div className="text-xs text-gray-400">Fahrer: {opName}</div>}
-              {entry.note && <div className="text-xs text-gray-400 italic">{entry.note}</div>}
+              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{entry.description}</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">{entry.hours}h × {formatCurrency(entry.hourlyRate)}/h</div>
+              {opName && <div className="text-xs text-gray-400 dark:text-gray-500">Fahrer: {opName}</div>}
+              {entry.note && <div className="text-xs text-gray-400 dark:text-gray-500 italic">{entry.note}</div>}
             </div>
             <div className="flex items-center gap-2">
               <span className="font-bold text-sm whitespace-nowrap">{formatCurrency(entry.total)}</span>
-              <button onClick={() => deleteMachineEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
+              <button onClick={() => deleteMachineEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400">
                 <Trash2 size={14} />
               </button>
             </div>
@@ -779,7 +778,7 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
         );
       })}
       {adding && (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Maschine / Fahrzeug hinzufügen</h4>
           {machineOptions.length > 0 && (
             <Select label="Aus Stammdaten" options={machineOptions} placeholder="Wählen oder manuell eingeben…" onChange={handleMachineSelect} value={form.machineId} />
@@ -791,7 +790,7 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
           </div>
           <Select label="Fahrer (optional)" options={employeeOptions} placeholder="Wählen…" value={form.operatorId} onChange={set('operatorId')} />
           <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Optional" />
-          <div className="text-sm bg-gray-50 rounded-lg px-3 py-2">
+          <div className="text-sm bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
             Total: <strong>{formatCurrency(Number(form.hours) * Number(form.hourlyRate))}</strong>
           </div>
           <div className="flex gap-2">
@@ -849,10 +848,10 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
       )}
 
       {entries.map((entry: any) => (
-        <div key={entry.id} className="bg-white rounded-2xl border border-gray-100 p-4">
+        <div key={entry.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
           <div className="flex justify-between items-start">
             <div className="flex-1 min-w-0 pr-3">
-              <div className="font-semibold text-sm text-gray-900">{entry.company}</div>
+              <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{entry.company}</div>
               <div className="text-sm text-gray-600 mt-0.5">{entry.description}</div>
               {entry.note && <div className="text-xs text-gray-400 italic mt-0.5">{entry.note}</div>}
             </div>
@@ -860,7 +859,7 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
               <span className="font-bold text-sm">{formatCurrency(entry.amount)}</span>
               <button
                 onClick={() => deleteSubcontractorEntry(entry.id)}
-                className="p-1.5 rounded-lg hover:bg-red-50 text-red-500"
+                className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 dark:text-red-400"
               >
                 <Trash2 size={14} />
               </button>
@@ -870,7 +869,7 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
       ))}
 
       {adding && (
-        <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Fremdleistung erfassen</h4>
           <Input
             label="Firma / Subunternehmer *"
@@ -898,7 +897,7 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: any) {
               onChange={set('note')}
               rows={2}
               placeholder="Rechnungsnummer, Bemerkungen…"
-              className="w-full rounded-xl border border-gray-300 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
+              className="w-full rounded-xl border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
             />
           </div>
           <div className="flex gap-2">
@@ -1001,7 +1000,7 @@ function PhotoCard({ photo }: { photo: any }) {
   };
 
   return (
-    <div className="rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+    <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm">
       <div className="relative">
         <img src={photo.dataUrl} alt="Foto" className="w-full aspect-video object-cover" />
         <button
@@ -1027,7 +1026,7 @@ function PhotoCard({ photo }: { photo: any }) {
         value={note}
         onChange={e => setNote(e.target.value)}
         onBlur={handleNoteBlur}
-        className="w-full px-3 py-2 text-xs border-0 border-t border-gray-100 focus:outline-none text-gray-600"
+        className="w-full px-3 py-2 text-xs border-0 border-t border-gray-100 dark:border-gray-700 focus:outline-none text-gray-600 dark:text-gray-300 bg-transparent"
       />
     </div>
   );
