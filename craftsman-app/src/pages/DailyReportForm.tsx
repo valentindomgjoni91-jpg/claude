@@ -4,8 +4,10 @@ import SignatureCanvas from 'react-signature-canvas';
 import {
   Check, Clock, Package, Truck, FileText, Image, Users,
   Plus, Trash2, Camera, Download, ChevronDown, ChevronUp,
-  Share2, Copy, MoreVertical, PenTool, X,
+  Share2, Copy, MoreVertical, PenTool, X, Briefcase,
 } from 'lucide-react';
+import { useLeistungEntries, addLeistungEntry, deleteLeistungEntry } from '../hooks/useLeistungEntries';
+import type { LeistungEntry } from '../types';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -34,6 +36,7 @@ import { generateDailyReportPdf } from '../pdf/dailyReportPdf';
 import { db } from '../db';
 import type { Weather, TimeEntry, MaterialEntry, MachineEntry, SubcontractorEntry, Photo, Material, Machine } from '../types';
 
+
 export default function DailyReportForm() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
@@ -56,6 +59,7 @@ export default function DailyReportForm() {
   const [activeTab, setActiveTab] = useState('info');
   const [saving, setSaving] = useState(false);
   const [reportId, setReportId] = useState(id);
+  const leistungEntries = useLeistungEntries(reportId);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [sigModalOpen, setSigModalOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -242,6 +246,7 @@ export default function DailyReportForm() {
     { id: 'material', label: `Material (${materialEntries?.length ?? 0})`, icon: <Package size={14} /> },
     { id: 'machine', label: `Maschinen (${machineEntries?.length ?? 0})`, icon: <Truck size={14} /> },
     { id: 'subcontractor', label: `Fremd${subCount > 0 ? ` (${subCount})` : ''}`, icon: <Users size={14} /> },
+    { id: 'leistungen', label: `Leistungen (${leistungEntries?.length ?? 0})`, icon: <Briefcase size={14} /> },
     { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
     { id: 'signature', label: report?.customerSignature ? 'Unterschrift ✓' : 'Unterschrift', icon: <PenTool size={14} /> },
   ];
@@ -312,6 +317,13 @@ export default function DailyReportForm() {
             entries={subcontractorEntries || []}
             onEnsureReport={ensureReport}
             totalCost={totalSubCost}
+          />
+        )}
+        {activeTab === 'leistungen' && (
+          <LeistungTab
+            reportId={reportId}
+            entries={leistungEntries || []}
+            onEnsureReport={ensureReport}
           />
         )}
         {activeTab === 'photos' && (
@@ -1059,6 +1071,92 @@ function PhotoCard({ photo }: { photo: Photo }) {
         onBlur={handleNoteBlur}
         className="w-full px-3 py-2 text-xs border-0 border-t border-gray-100 dark:border-gray-700 focus:outline-none text-gray-600 dark:text-gray-300 bg-transparent"
       />
+    </div>
+  );
+}
+
+// ---- LeistungTab ----
+
+const LEISTUNG_TYPES_LIST = [
+  'Regiearbeit', 'Wandbeläge', 'Bodenbeläge', 'Fugenarbeiten',
+  'Isolationsarbeiten', 'Verputzarbeiten', 'Malerarbeiten', 'Abbrucharbeiten', 'Sonstiges',
+];
+
+function LeistungTab({ reportId, entries, onEnsureReport }: {
+  reportId?: string;
+  entries: LeistungEntry[];
+  onEnsureReport: () => Promise<string>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [form, setForm] = useState({ leistungsart: LEISTUNG_TYPES_LIST[0], stunden: '1', kommentar: '' });
+  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleAdd = async () => {
+    await onEnsureReport();
+    await addLeistungEntry({
+      reportId: reportId!,
+      leistungsart: form.leistungsart,
+      stunden: Number(form.stunden),
+      kommentar: form.kommentar || undefined,
+    });
+    setAdding(false);
+    setForm({ leistungsart: LEISTUNG_TYPES_LIST[0], stunden: '1', kommentar: '' });
+  };
+
+  const totalHours = entries.reduce((s, e) => s + e.stunden, 0);
+
+  return (
+    <div className="space-y-3">
+      {entries.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-700 flex justify-between">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">Leistungen</span>
+            <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{totalHours}h total</span>
+          </div>
+          {entries.map(entry => (
+            <div key={entry.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 dark:border-gray-700 last:border-0">
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{entry.leistungsart}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{entry.stunden}h{entry.kommentar ? ` – ${entry.kommentar}` : ''}</div>
+              </div>
+              <button onClick={() => deleteLeistungEntry(entry.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 flex-shrink-0">
+                <Trash2 size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {adding && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
+          <h4 className="font-semibold text-sm">Leistung erfassen</h4>
+          <Select
+            label="Leistungsart *"
+            options={LEISTUNG_TYPES_LIST.map(t => ({ value: t, label: t }))}
+            value={form.leistungsart}
+            onChange={set('leistungsart')}
+          />
+          <Input label="Stunden" type="number" value={form.stunden} onChange={set('stunden')} min="0.5" step="0.5" />
+          <Textarea label="Kommentar" value={form.kommentar} onChange={set('kommentar')} rows={2} placeholder="Optionale Beschreibung…" />
+          <div className="flex gap-2">
+            <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Hinzufügen</Button>
+            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
+          </div>
+        </div>
+      )}
+
+      {!adding && (
+        <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
+          <Plus size={16} /> Leistung hinzufügen
+        </Button>
+      )}
+
+      {entries.length === 0 && !adding && (
+        <div className="text-center py-8 text-gray-400 dark:text-gray-500 text-sm">
+          Noch keine Leistungen erfasst.
+        </div>
+      )}
     </div>
   );
 }

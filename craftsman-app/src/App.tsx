@@ -10,13 +10,14 @@ import RegiReportForm from './pages/RegiReportForm';
 import TimeTracking from './pages/TimeTracking';
 import Archive from './pages/Archive';
 import MasterData from './pages/MasterData';
-import { seedDefaultData } from './db';
+import { seedDefaultData, cleanupDemoData } from './db';
 import { LanguageProvider } from './i18n';
 import { ThemeProvider } from './hooks/useTheme';
 
 export default function App() {
   useEffect(() => {
     seedDefaultData().catch(console.error);
+    cleanupDemoData().catch(console.error);
   }, []);
 
   return (

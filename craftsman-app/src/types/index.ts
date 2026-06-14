@@ -180,3 +180,12 @@ export interface SyncQueueItem {
   synced: boolean;
   attempts: number;
 }
+
+export interface LeistungEntry {
+  id: string;
+  reportId: string;
+  leistungsart: string;
+  stunden: number;
+  kommentar?: string;
+  createdAt: string;
+}

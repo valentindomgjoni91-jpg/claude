@@ -2,7 +2,7 @@ import Dexie, { type Table } from 'dexie';
 import type {
   Project, DailyReport, TimeEntry, MaterialEntry, MachineEntry,
   SubcontractorEntry, Photo, RegiReport, RegiPosition,
-  Employee, Machine, Material, Company, SyncQueueItem,
+  Employee, Machine, Material, Company, SyncQueueItem, LeistungEntry,
 } from '../types';
 
 export class CraftsmanDB extends Dexie {
@@ -20,6 +20,7 @@ export class CraftsmanDB extends Dexie {
   materials!: Table<Material>;
   company!: Table<Company>;
   syncQueue!: Table<SyncQueueItem>;
+  leistungEntries!: Table<LeistungEntry>;
 
   constructor() {
     super('CraftsmanDB');
@@ -38,6 +39,9 @@ export class CraftsmanDB extends Dexie {
       materials: 'id, active, name, category',
       company: 'id',
       syncQueue: 'id, tableName, synced, createdAt',
+    });
+    this.version(2).stores({
+      leistungEntries: 'id, reportId, createdAt',
     });
   }
 }
@@ -97,4 +101,31 @@ export async function seedDefaultData(): Promise<void> {
     createdAt: now,
     updatedAt: now,
   });
+}
+
+export async function cleanupDemoData(): Promise<void> {
+  try {
+    const demoNames = [
+      { firstName: 'Hans', lastName: 'Müller' },
+      { firstName: 'Peter', lastName: 'Schmid' },
+      { firstName: 'Anna', lastName: 'Keller' },
+    ];
+    for (const { firstName, lastName } of demoNames) {
+      const employees = await db.employees
+        .where('lastName').equals(lastName)
+        .filter(e => e.firstName === firstName)
+        .toArray();
+      for (const emp of employees) {
+        await db.employees.delete(emp.id);
+      }
+    }
+    const demoProjects = await db.projects
+      .filter(p => p.title === 'Neubau Einfamilienhaus Muster')
+      .toArray();
+    for (const proj of demoProjects) {
+      await db.projects.delete(proj.id);
+    }
+  } catch {
+    // silently ignore errors
+  }
 }
