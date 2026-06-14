@@ -128,7 +128,7 @@ export default function RegiReportForm() {
       alert('Bitte unterschreiben Sie zuerst.');
       return;
     }
-    const sigDataUrl = sigRef.current.toDataURL('image/png');
+    const sigDataUrl = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
     await signRegiReport(reportId, customerName, sigDataUrl);
     setSigModalOpen(false);
   };
@@ -362,7 +362,7 @@ export default function RegiReportForm() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => { ensureReport(); setSigModalOpen(true); }}
+                    onClick={async () => { await ensureReport(); setSigModalOpen(true); }}
                   >
                     <PenTool size={16} /> Kundenunterschrift einholen
                   </Button>

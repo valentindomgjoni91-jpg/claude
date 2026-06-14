@@ -336,7 +336,7 @@ export default function DailyReportForm() {
                   <Button
                     variant="outline"
                     className="w-full"
-                    onClick={() => { ensureReport(); setSigModalOpen(true); }}
+                    onClick={async () => { await ensureReport(); setSigModalOpen(true); }}
                   >
                     <PenTool size={16} /> Unterschrift einholen
                   </Button>

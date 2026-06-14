@@ -16,7 +16,7 @@ function toCSV(headers: string[], rows: (string | number | undefined | null)[][]
 }
 
 function downloadCSV(content: string, filename: string) {
-  const bom = '﻿'; // UTF-8 BOM for Excel compatibility
+  const bom = '\uFEFF'; // UTF-8 BOM for Excel compatibility
   const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
