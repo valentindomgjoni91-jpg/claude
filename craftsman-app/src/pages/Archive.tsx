@@ -176,7 +176,7 @@ export default function Archive() {
           db.subcontractorEntries.where('reportId').equals(rpt.id).toArray(),
           db.photos.where('reportId').equals(rpt.id).toArray(),
         ]);
-        const pdf = generateDailyReportPdf({ report: rpt, project: proj, timeEntries: times, materialEntries: mats, machineEntries: machEntries, subcontractorEntries: subs, photos, employees: emps, machines: machs, company: co ?? null });
+        const pdf = await generateDailyReportPdf({ report: rpt, project: proj, timeEntries: times, materialEntries: mats, machineEntries: machEntries, subcontractorEntries: subs, photos, employees: emps, machines: machs, company: co ?? null });
         pdf.save(`Tagesrapport_${rpt.date}.pdf`);
       } else {
         const [rpt, proj, positions, co] = await Promise.all([
@@ -186,7 +186,7 @@ export default function Archive() {
           db.company.toCollection().first(),
         ]);
         if (!rpt || !proj) return;
-        const pdf = generateRegiReportPdf({ report: rpt, project: proj, positions, company: co ?? null });
+        const pdf = await generateRegiReportPdf({ report: rpt, project: proj, positions, company: co ?? null });
         pdf.save(`Regierapport_${rpt.date}.pdf`);
       }
     } finally {

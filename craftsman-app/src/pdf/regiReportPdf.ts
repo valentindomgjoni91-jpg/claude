@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDate, formatCurrency } from '../utils';
+import { generateQrDataUrl } from '../utils/qrCode';
 import type { RegiReport, RegiPosition, Project, Company, Photo } from '../types';
 
 interface RegiReportPdfData {
@@ -11,7 +12,7 @@ interface RegiReportPdfData {
   photos?: Photo[];
 }
 
-export function generateRegiReportPdf(data: RegiReportPdfData): jsPDF {
+export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<jsPDF> {
   const { report, project, positions, company, photos = [] } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -45,6 +46,13 @@ export function generateRegiReportPdf(data: RegiReportPdfData): jsPDF {
     if (company.phone) doc.text(company.phone, pageWidth - margin, 22, { align: 'right' });
   }
   y = headerH + 8;
+
+  // QR Code (top-right of first page after header)
+  const qrText = `Regierapport/${data.report.id}`;
+  const qrDataUrl = await generateQrDataUrl(qrText, 80);
+  if (qrDataUrl) {
+    try { doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 12, headerH - 10, 12, 12); } catch { /* skip */ }
+  }
 
   // Report info
   doc.setTextColor(0, 0, 0);

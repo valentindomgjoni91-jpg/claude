@@ -1,6 +1,7 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDate, formatHours, formatCurrency, WEATHER_LABELS } from '../utils';
+import { generateQrDataUrl } from '../utils/qrCode';
 import type {
   DailyReport, Project, TimeEntry, MaterialEntry, MachineEntry,
   SubcontractorEntry, Photo, Employee, Machine, Company,
@@ -19,7 +20,7 @@ interface DailyReportPdfData {
   company: Company | null;
 }
 
-export function generateDailyReportPdf(data: DailyReportPdfData): jsPDF {
+export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<jsPDF> {
   const { report, project, timeEntries, materialEntries, machineEntries, subcontractorEntries, photos, employees, machines, company } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -56,6 +57,13 @@ export function generateDailyReportPdf(data: DailyReportPdfData): jsPDF {
     if (company.phone) doc.text(company.phone, pageWidth - margin, 22, { align: 'right' });
   }
   y = headerH + 8;
+
+  // QR Code (top-right of first page after header)
+  const qrText = `Tagesrapport/${data.report.id}`;
+  const qrDataUrl = await generateQrDataUrl(qrText, 80);
+  if (qrDataUrl) {
+    try { doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 12, headerH - 10, 12, 12); } catch { /* skip */ }
+  }
 
   // Report Info
   doc.setTextColor(0, 0, 0);

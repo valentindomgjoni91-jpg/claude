@@ -141,7 +141,7 @@ export default function RegiReportForm() {
     ]);
     if (!proj) return null;
     return {
-      pdf: generateRegiReportPdf({
+      pdf: await generateRegiReportPdf({
         report,
         project: proj,
         positions: positions || [],
@@ -620,18 +620,37 @@ function fileToDataUrl(file: File): Promise<string> {
 }
 
 function RegiPhotosTab({ photos, onEnsureReport }: {
-  photos: { id: string; dataUrl: string; note?: string }[];
+  photos: { id: string; dataUrl: string; note?: string; latitude?: number; longitude?: number }[];
   onEnsureReport: () => Promise<string>;
 }) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const getGPS = (): Promise<{ latitude: number; longitude: number } | null> => {
+    return new Promise(resolve => {
+      if (!navigator.geolocation) { resolve(null); return; }
+      navigator.geolocation.getCurrentPosition(
+        pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        () => resolve(null),
+        { timeout: 5000, maximumAge: 30000 }
+      );
+    });
+  };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files?.length) return;
     const rId = await onEnsureReport();
+    const coords = await getGPS();
     for (const file of Array.from(files)) {
       const dataUrl = await fileToDataUrl(file);
-      await addPhoto({ reportId: rId, reportType: 'regi', timestamp: nowISO(), dataUrl, note: '' });
+      await addPhoto({
+        reportId: rId,
+        reportType: 'regi',
+        timestamp: nowISO(),
+        dataUrl,
+        note: '',
+        ...(coords ? { latitude: coords.latitude, longitude: coords.longitude } : {}),
+      });
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -661,6 +680,16 @@ function RegiPhotosTab({ photos, onEnsureReport }: {
               >
                 <Trash2 size={12} />
               </button>
+              {photo.latitude && (
+                <a
+                  href={`https://maps.google.com/?q=${photo.latitude},${photo.longitude}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                >
+                  GPS
+                </a>
+              )}
             </div>
             <div className="p-2">
               <p className="text-xs text-gray-500 truncate">{photo.note || 'Kein Kommentar'}</p>
