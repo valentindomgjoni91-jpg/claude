@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt } from 'lucide-react';
+import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -18,7 +18,8 @@ import {
 } from '../hooks/useRegiReports';
 import { useProjects } from '../hooks/useProjects';
 import { useCompany } from '../hooks/useMasterData';
-import { todayISO, formatCurrency, UNITS } from '../utils';
+import { todayISO, nowISO, formatCurrency, UNITS } from '../utils';
+import { usePhotos, addPhoto, deletePhoto } from '../hooks/useDailyReports';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
 import { db } from '../db';
 import { sharePdf, sendByEmail, buildRegiReportEmailBody } from '../utils/share';
@@ -50,6 +51,8 @@ export default function RegiReportForm() {
   const [activeTab, setActiveTab] = useState('info');
   const [saving, setSaving] = useState(false);
   const [reportId, setReportId] = useState(id);
+
+  const photos = usePhotos(reportId);
   const [sigModalOpen, setSigModalOpen] = useState(false);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
   const [customerName, setCustomerName] = useState('');
@@ -213,6 +216,7 @@ export default function RegiReportForm() {
   const tabs = [
     { id: 'info', label: 'Info' },
     { id: 'positions', label: `Positionen (${positions?.length ?? 0})` },
+    { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
     { id: 'summary', label: 'Abschluss' },
   ];
 
@@ -265,6 +269,13 @@ export default function RegiReportForm() {
           <PositionsTab
             reportId={reportId}
             positions={positions || []}
+            onEnsureReport={ensureReport}
+          />
+        )}
+
+        {activeTab === 'photos' && (
+          <RegiPhotosTab
+            photos={photos || []}
             onEnsureReport={ensureReport}
           />
         )}
@@ -522,6 +533,75 @@ function PositionsTab({ positions, onEnsureReport }: { reportId?: string; positi
       <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
         <Plus size={16} /> Position hinzufügen
       </Button>
+    </div>
+  );
+}
+
+// ── RegiPhotosTab ─────────────────────────────────────────────────────────────
+
+function fileToDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target?.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function RegiPhotosTab({ photos, onEnsureReport }: {
+  photos: { id: string; dataUrl: string; note?: string }[];
+  onEnsureReport: () => Promise<string>;
+}) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files?.length) return;
+    const rId = await onEnsureReport();
+    for (const file of Array.from(files)) {
+      const dataUrl = await fileToDataUrl(file);
+      await addPhoto({ reportId: rId, reportType: 'regi', timestamp: nowISO(), dataUrl, note: '' });
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  return (
+    <div className="space-y-3">
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        capture="environment"
+        className="hidden"
+        onChange={handleFileSelect}
+      />
+      <Button variant="outline" className="w-full" onClick={() => fileInputRef.current?.click()}>
+        <Camera size={16} /> Foto aufnehmen / hochladen
+      </Button>
+      <div className="grid grid-cols-2 gap-2">
+        {photos.map(photo => (
+          <div key={photo.id} className="rounded-xl overflow-hidden border border-gray-200 bg-white shadow-sm">
+            <div className="relative">
+              <img src={photo.dataUrl} alt="Foto" className="w-full aspect-video object-cover" />
+              <button
+                onClick={() => deletePhoto(photo.id)}
+                className="absolute top-2 right-2 w-7 h-7 bg-red-500 text-white rounded-full flex items-center justify-center shadow"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+            <div className="p-2">
+              <p className="text-xs text-gray-500 truncate">{photo.note || 'Kein Kommentar'}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+      {photos.length === 0 && (
+        <div className="text-center py-8 text-gray-400 text-sm">
+          Noch keine Fotos vorhanden.<br />Kamera-Button verwenden.
+        </div>
+      )}
     </div>
   );
 }

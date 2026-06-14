@@ -29,6 +29,9 @@ export interface DailyReport {
   temperature?: number;
   notes?: string;
   status: ReportStatus;
+  customerName?: string;
+  customerSignature?: string;
+  signedAt?: string;
   createdBy?: string;
   createdAt: string;
   updatedAt: string;

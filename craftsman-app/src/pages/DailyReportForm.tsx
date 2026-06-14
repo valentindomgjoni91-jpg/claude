@@ -1,15 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import SignatureCanvas from 'react-signature-canvas';
 import {
   Check, Clock, Package, Truck, FileText, Image, Users,
   Plus, Trash2, Camera, Download, ChevronDown, ChevronUp,
-  Share2, Copy, MoreVertical,
+  Share2, Copy, MoreVertical, PenTool, X,
 } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Textarea from '../components/ui/Textarea';
+import Modal from '../components/ui/Modal';
 import { Tabs } from '../components/ui/Tabs';
 import Badge from '../components/ui/Badge';
 import ActionSheet from '../components/ui/ActionSheet';
@@ -23,7 +25,7 @@ import {
   addMaterialEntry, deleteMaterialEntry,
   addMachineEntry, deleteMachineEntry,
   addSubcontractorEntry, deleteSubcontractorEntry,
-  addPhoto, deletePhoto,
+  addPhoto, deletePhoto, signDailyReport,
 } from '../hooks/useDailyReports';
 import { useProjects } from '../hooks/useProjects';
 import { useEmployees, useMachines, useMaterials, useCompany } from '../hooks/useMasterData';
@@ -55,6 +57,9 @@ export default function DailyReportForm() {
   const [saving, setSaving] = useState(false);
   const [reportId, setReportId] = useState(id);
   const [actionSheetOpen, setActionSheetOpen] = useState(false);
+  const [sigModalOpen, setSigModalOpen] = useState(false);
+  const [customerName, setCustomerName] = useState('');
+  const sigRef = useRef<SignatureCanvas>(null);
 
   const [form, setForm] = useState({
     projectId: searchParams.get('projectId') || '',
@@ -77,6 +82,7 @@ export default function DailyReportForm() {
         notes: report.notes || '',
         status: report.status,
       });
+      setCustomerName(report.customerName || '');
     }
   }, [report]);
 
@@ -98,6 +104,14 @@ export default function DailyReportForm() {
     setReportId(newId);
     navigate(`/tagesrapport/${newId}`, { replace: true });
     return newId;
+  };
+
+  const handleSign = async () => {
+    if (!sigRef.current || sigRef.current.isEmpty()) return;
+    const rId = await ensureReport();
+    const dataUrl = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
+    await signDailyReport(rId, customerName, dataUrl);
+    setSigModalOpen(false);
   };
 
   const handleSave = async (complete = false) => {
@@ -218,6 +232,7 @@ export default function DailyReportForm() {
     { id: 'machine', label: `Maschinen (${machineEntries?.length ?? 0})`, icon: <Truck size={14} /> },
     { id: 'subcontractor', label: `Fremd${subCount > 0 ? ` (${subCount})` : ''}`, icon: <Users size={14} /> },
     { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
+    { id: 'signature', label: report?.customerSignature ? 'Unterschrift ✓' : 'Unterschrift', icon: <PenTool size={14} /> },
   ];
 
   const totalHours = timeEntries?.reduce((s, e) => s + e.totalHours, 0) ?? 0;
@@ -293,6 +308,43 @@ export default function DailyReportForm() {
             onEnsureReport={ensureReport}
           />
         )}
+        {activeTab === 'signature' && (
+          <div className="space-y-4">
+            <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+              <h3 className="font-semibold text-sm text-gray-700">Kundenbestätigung</h3>
+              {report?.customerSignature ? (
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-xl p-3">
+                    <img src={report.customerSignature} alt="Unterschrift" className="max-h-24 w-auto" />
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    Unterzeichnet von <strong>{report.customerName}</strong>
+                  </p>
+                  <Badge variant="success">Unterschrift vorhanden</Badge>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">
+                    Kunde bestätigt die ausgeführten Arbeiten mit Unterschrift.
+                  </p>
+                  <Input
+                    label="Name Kunde"
+                    value={customerName}
+                    onChange={e => setCustomerName(e.target.value)}
+                    placeholder="Vor- und Nachname"
+                  />
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => { ensureReport(); setSigModalOpen(true); }}
+                  >
+                    <PenTool size={16} /> Unterschrift einholen
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom action bar */}
@@ -313,6 +365,35 @@ export default function DailyReportForm() {
           </div>
         )}
       </div>
+
+      {/* Signature Modal */}
+      <Modal open={sigModalOpen} onClose={() => setSigModalOpen(false)} title="Kundenunterschrift" size="lg">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-600">
+            Ich bestätige die korrekte Ausführung der aufgeführten Arbeiten.
+          </p>
+          <div className="border-2 border-dashed border-gray-300 rounded-xl overflow-hidden bg-gray-50">
+            <SignatureCanvas
+              ref={sigRef}
+              canvasProps={{
+                width: 500,
+                height: 200,
+                className: 'w-full touch-none',
+                style: { touchAction: 'none' },
+              }}
+              backgroundColor="transparent"
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button variant="ghost" size="sm" onClick={() => sigRef.current?.clear()}>
+              <X size={14} /> Löschen
+            </Button>
+            <Button className="flex-1" onClick={handleSign}>
+              <Check size={16} /> Bestätigen & speichern
+            </Button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Export / Actions Bottom Sheet */}
       <ActionSheet

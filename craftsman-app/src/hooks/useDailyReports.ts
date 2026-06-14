@@ -66,6 +66,15 @@ export async function updateDailyReport(id: string, data: Partial<DailyReport>):
   await db.dailyReports.update(id, { ...data, updatedAt: nowISO() });
 }
 
+export async function signDailyReport(id: string, customerName: string, signature: string): Promise<void> {
+  await db.dailyReports.update(id, {
+    customerName,
+    customerSignature: signature,
+    signedAt: nowISO(),
+    updatedAt: nowISO(),
+  });
+}
+
 export async function addTimeEntry(entry: Omit<TimeEntry, 'id'>): Promise<string> {
   const id = uuidv4();
   await db.timeEntries.add({ ...entry, id });
