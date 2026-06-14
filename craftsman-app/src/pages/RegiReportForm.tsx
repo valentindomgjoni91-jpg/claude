@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText, ClipboardList } from 'lucide-react';
-import PageHeader from '../components/layout/PageHeader';
+import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText, ClipboardList, ArrowLeft } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -45,7 +44,6 @@ export default function RegiReportForm() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const isEdit = !!id;
 
   const report = useRegiReport(id);
   const positions = useRegiPositions(id);
@@ -257,12 +255,16 @@ export default function RegiReportForm() {
 
   return (
     <div>
-      <PageHeader
-        title={isEdit ? 'Regierapport' : 'Neuer Regierapport'}
-        subtitle={form.title}
-        backTo={form.projectId ? `/projects/${form.projectId}` : '/'}
-        action={
-          <div className="flex gap-2">
+      <div className="sticky top-[52px] z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
+        <div className="px-4 py-2 flex items-center gap-2">
+          <button
+            onClick={() => navigate(form.projectId ? `/projects/${form.projectId}` : '/')}
+            className="p-1.5 -ml-1.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+          >
+            <ArrowLeft size={18} />
+          </button>
+          <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{form.title}</span>
+          <div className="flex items-center gap-2">
             {reportId && (
               <Button variant="ghost" size="sm" onClick={() => setActionSheetOpen(true)}>
                 <MoreVertical size={16} />
@@ -272,11 +274,10 @@ export default function RegiReportForm() {
               <Check size={16} /> Speichern
             </Button>
           </div>
-        }
-      />
-
-      <div className="px-4 py-3">
-        <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
+        <div className="px-4 pb-2">
+          <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
+        </div>
       </div>
 
       <div className="px-4 pb-24 space-y-4">
