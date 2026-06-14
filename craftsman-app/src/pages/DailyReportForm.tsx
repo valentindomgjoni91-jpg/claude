@@ -110,7 +110,7 @@ export default function DailyReportForm() {
   const handleSign = async () => {
     if (!sigRef.current || sigRef.current.isEmpty()) return;
     const rId = await ensureReport();
-    const dataUrl = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
+    const dataUrl = sigRef.current.getCanvas().toDataURL('image/png');
     await signDailyReport(rId, customerName, dataUrl);
     setSigModalOpen(false);
   };

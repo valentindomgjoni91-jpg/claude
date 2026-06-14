@@ -130,7 +130,7 @@ export default function RegiReportForm() {
       alert('Bitte unterschreiben Sie zuerst.');
       return;
     }
-    const sigDataUrl = sigRef.current.getTrimmedCanvas().toDataURL('image/png');
+    const sigDataUrl = sigRef.current.getCanvas().toDataURL('image/png');
     await signRegiReport(reportId, customerName, sigDataUrl);
     setSigModalOpen(false);
   };
