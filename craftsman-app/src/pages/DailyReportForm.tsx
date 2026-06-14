@@ -30,7 +30,7 @@ import {
 } from '../hooks/useDailyReports';
 import { useProjects } from '../hooks/useProjects';
 import { useEmployees, useMachines, useMaterials, useCompany } from '../hooks/useMasterData';
-import { todayISO, nowISO, calcTotalHours, formatHours, formatCurrency, WEATHER_LABELS, UNITS, cn } from '../utils';
+import { todayISO, nowISO, calcTotalHours, formatHours, formatCurrency, UNITS } from '../utils';
 import { generateDailyReportPdf } from '../pdf/dailyReportPdf';
 import { db } from '../db';
 import type { Weather, TimeEntry, MaterialEntry, MachineEntry, SubcontractorEntry, Photo, Material, Machine } from '../types';
@@ -471,26 +471,6 @@ function InfoTab({ form, set, projectOptions }: InfoTabProps) {
         <Select label="Projekt *" value={form.projectId} onChange={set('projectId')} options={projectOptions} placeholder="Projekt wählen…" />
         <Input label="Datum" type="date" value={form.date} onChange={set('date')} />
         <Input label="Titel" value={form.title} onChange={set('title')} />
-      </div>
-      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">
-        <h3 className="text-sm font-semibold text-gray-700">Wetter</h3>
-        <div className="grid grid-cols-3 gap-2">
-          {Object.entries(WEATHER_LABELS).map(([value, label]) => (
-            <button
-              key={value}
-              onClick={() => set('weather')({ target: { value } } as React.ChangeEvent<HTMLSelectElement>)}
-              className={cn(
-                'py-2 px-2 rounded-xl text-xs font-medium border-2 transition-colors text-center',
-                form.weather === value
-                  ? 'border-primary-500 bg-primary-50 text-primary-700'
-                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
-              )}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
-        <Input label="Temperatur (°C)" type="number" value={form.temperature} onChange={set('temperature')} placeholder="z.B. 18" />
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4">
         <Textarea label="Notizen / Bemerkungen" value={form.notes} onChange={set('notes')} rows={4} />
