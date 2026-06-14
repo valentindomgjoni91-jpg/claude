@@ -28,6 +28,7 @@ export default function ProjectForm() {
     responsibleId: '',
     startDate: todayISO(),
     endDate: '',
+    budget: '',
   });
 
   useEffect(() => {
@@ -42,6 +43,7 @@ export default function ProjectForm() {
         responsibleId: project.responsibleId || '',
         startDate: project.startDate || todayISO(),
         endDate: project.endDate || '',
+        budget: project.budget?.toString() || '',
       });
     }
   }, [project]);
@@ -53,11 +55,12 @@ export default function ProjectForm() {
     if (!form.title || !form.clientName || !form.siteAddress) return;
     setSaving(true);
     try {
+      const payload = { ...form, budget: form.budget ? Number(form.budget) : undefined };
       if (isEdit && id) {
-        await updateProject(id, form);
+        await updateProject(id, payload);
         navigate(`/projects/${id}`);
       } else {
-        const newId = await createProject({ ...form, status: 'active' });
+        const newId = await createProject({ ...payload, status: 'active' });
         navigate(`/projects/${newId}`);
       }
     } finally {
@@ -95,6 +98,7 @@ export default function ProjectForm() {
           <Input label="Projektbezeichnung *" value={form.title} onChange={set('title')} placeholder="z.B. Neubau EFH Muster" />
           <Input label="Startdatum" type="date" value={form.startDate} onChange={set('startDate')} />
           <Input label="Enddatum (geplant)" type="date" value={form.endDate} onChange={set('endDate')} />
+          <Input label="Budget (CHF)" type="number" value={form.budget} onChange={set('budget')} placeholder="z.B. 50000" />
           <Select
             label="Verantwortlicher"
             value={form.responsibleId}

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image } from 'lucide-react';
+import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -21,6 +21,7 @@ import { useCompany } from '../hooks/useMasterData';
 import { todayISO, nowISO, formatCurrency, UNITS } from '../utils';
 import { usePhotos, addPhoto, deletePhoto } from '../hooks/useDailyReports';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
+import { generateInvoicePdf } from '../pdf/invoicePdf';
 import { db } from '../db';
 import { sharePdf, sendByEmail, buildRegiReportEmailBody } from '../utils/share';
 import { duplicateRegiReport } from '../hooks/useDuplicate';
@@ -201,6 +202,22 @@ export default function RegiReportForm() {
     navigate(`/regierapport/${newId}`);
   };
 
+  const handleInvoicePdf = async () => {
+    if (!reportId || !report) return;
+    const [proj, company_] = await Promise.all([
+      db.projects.get(form.projectId),
+      db.company.toCollection().first(),
+    ]);
+    if (!proj) return;
+    const { pdf, invoiceNumber } = generateInvoicePdf({
+      report,
+      positions: positions || [],
+      project: proj,
+      company: company_ || null,
+    });
+    pdf.save(`Rechnung_${invoiceNumber}_${form.date}.pdf`);
+  };
+
   const projectOptions = projects?.map(p => ({ value: p.id, label: p.title })) || [];
 
   // Totals
@@ -355,6 +372,11 @@ export default function RegiReportForm() {
                 <Receipt size={16} /> Als verrechnet markieren
               </Button>
             )}
+            {(report?.status === 'signed' || report?.status === 'invoiced') && (
+              <Button variant="outline" className="w-full" onClick={handleInvoicePdf}>
+                <FileText size={16} /> Rechnung erstellen (PDF)
+              </Button>
+            )}
             {report?.status === 'invoiced' && (
               <div className="flex justify-center">
                 <Badge variant="info" className="text-sm py-2 px-4">✓ Verrechnet</Badge>
@@ -436,6 +458,12 @@ export default function RegiReportForm() {
             label: 'Als verrechnet markieren',
             description: 'Status auf "Verrechnet" setzen',
             onClick: handleMarkInvoiced,
+          }] : []),
+          ...((report?.status === 'signed' || report?.status === 'invoiced') ? [{
+            icon: <FileText size={18} />,
+            label: 'Rechnung erstellen',
+            description: 'Rechnungs-PDF generieren und speichern',
+            onClick: handleInvoicePdf,
           }] : []),
         ]}
       />

@@ -1,13 +1,15 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { Edit2, Plus, Calendar, FileText, ChevronRight, MapPin, User, Phone, Clock, TrendingUp } from 'lucide-react';
+import { Edit2, Plus, Calendar, FileText, ChevronRight, MapPin, User, Phone, Clock, TrendingUp, Download } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import { useProject } from '../hooks/useProjects';
+import { useCompany } from '../hooks/useMasterData';
 import { db } from '../db';
 import { formatDate, formatHours, formatCurrency } from '../utils';
+import { generateProjectReportPdf } from '../pdf/projectReportPdf';
 import type { ProjectStatus } from '../types';
 
 function ProjectBadge({ status }: { status: ProjectStatus }) {
@@ -37,24 +39,60 @@ export default function ProjectDetail() {
     if (!id) return null;
     const reports = await db.dailyReports.where('projectId').equals(id).toArray();
     const reportIds = reports.map(r => r.id);
-    if (reportIds.length === 0) return { totalHours: 0, totalMaterialCost: 0, totalMachineCost: 0 };
 
-    const [timeEntries, materialEntries, machineEntries] = await Promise.all([
-      db.timeEntries.where('reportId').anyOf(reportIds).toArray(),
-      db.materialEntries.where('reportId').anyOf(reportIds).filter(e => e.reportType === 'daily').toArray(),
-      db.machineEntries.where('reportId').anyOf(reportIds).filter(e => e.reportType === 'daily').toArray(),
+    const regiReportsList = await db.regiReports.where('projectId').equals(id).toArray();
+    const regiReportIds = regiReportsList.map(r => r.id);
+
+    const [timeEntries, materialEntries, machineEntries, subEntries, regiPositions] = await Promise.all([
+      reportIds.length > 0
+        ? db.timeEntries.where('reportId').anyOf(reportIds).toArray()
+        : Promise.resolve([]),
+      reportIds.length > 0
+        ? db.materialEntries.where('reportId').anyOf(reportIds).filter(e => e.reportType === 'daily').toArray()
+        : Promise.resolve([]),
+      reportIds.length > 0
+        ? db.machineEntries.where('reportId').anyOf(reportIds).filter(e => e.reportType === 'daily').toArray()
+        : Promise.resolve([]),
+      reportIds.length > 0
+        ? db.subcontractorEntries.where('reportId').anyOf(reportIds).toArray()
+        : Promise.resolve([]),
+      regiReportIds.length > 0
+        ? db.regiPositions.where('regiReportId').anyOf(regiReportIds).toArray()
+        : Promise.resolve([]),
     ]);
 
     const totalHours = timeEntries.reduce((sum, e) => sum + e.totalHours, 0);
-    const totalMaterialCost = materialEntries.reduce(
-      (sum, e) => sum + (e.quantity ?? 0) * (e.unitPrice ?? 0), 0
-    );
-    const totalMachineCost = machineEntries.reduce(
-      (sum, e) => sum + (e.hours ?? 0) * (e.hourlyRate ?? 0), 0
-    );
+    const totalMaterialCost = materialEntries.reduce((sum, e) => sum + (e.quantity ?? 0) * (e.unitPrice ?? 0), 0);
+    const totalMachineCost = machineEntries.reduce((sum, e) => sum + (e.hours ?? 0) * (e.hourlyRate ?? 0), 0);
+    const totalSubCost = subEntries.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+    const regiTotal = regiPositions.reduce((sum, p) => sum + (p.total ?? 0), 0);
 
-    return { totalHours, totalMaterialCost, totalMachineCost };
+    return { totalHours, totalMaterialCost, totalMachineCost, totalSubCost, regiTotal };
   }, [id]);
+
+  const company = useCompany();
+
+  const handleProjectReportPdf = async () => {
+    if (!project || !id) return;
+    const [allDailyReports, allRegiReports] = await Promise.all([
+      db.dailyReports.where('projectId').equals(id).reverse().sortBy('date'),
+      db.regiReports.where('projectId').equals(id).reverse().sortBy('date'),
+    ]);
+    const pdf = generateProjectReportPdf({
+      project,
+      dailyReports: allDailyReports,
+      regiReports: allRegiReports,
+      stats: {
+        totalHours: projectStats?.totalHours ?? 0,
+        totalMaterialCost: projectStats?.totalMaterialCost ?? 0,
+        totalMachineCost: projectStats?.totalMachineCost ?? 0,
+        totalSubCost: projectStats?.totalSubCost ?? 0,
+        regiTotal: projectStats?.regiTotal ?? 0,
+      },
+      company: company ?? null,
+    });
+    pdf.save(`Projektbericht_${project.title.replace(/\s+/g, '_')}.pdf`);
+  };
 
   if (!project) return <div className="p-4 text-gray-500">Projekt nicht gefunden.</div>;
 
@@ -115,7 +153,7 @@ export default function ProjectDetail() {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           <Button
             onClick={() => navigate(`/tagesrapport/new?projectId=${id}`)}
             className="h-14 flex-col gap-1"
@@ -130,6 +168,14 @@ export default function ProjectDetail() {
           >
             <FileText size={18} />
             <span className="text-xs">Regierapport</span>
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleProjectReportPdf}
+            className="h-14 flex-col gap-1"
+          >
+            <Download size={18} />
+            <span className="text-xs">Bericht PDF</span>
           </Button>
         </div>
 
@@ -161,6 +207,28 @@ export default function ProjectDetail() {
                 <div className="text-xs text-gray-500 mt-0.5">Maschinen</div>
               </div>
             </div>
+            {project.budget && project.budget > 0 && projectStats && (() => {
+              const gesamtIst = (projectStats.totalMaterialCost ?? 0) + (projectStats.totalMachineCost ?? 0) + (projectStats.totalSubCost ?? 0);
+              const pct = Math.min(100, Math.round((gesamtIst / project.budget!) * 100));
+              const over = gesamtIst > project.budget!;
+              return (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span>Budget: {formatCurrency(project.budget!)}</span>
+                    <span className={over ? 'text-red-500 font-semibold' : ''}>{pct}% genutzt</span>
+                  </div>
+                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${over ? 'bg-red-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <div className="text-xs text-gray-400 text-right">
+                    Ist: {formatCurrency(gesamtIst)}
+                  </div>
+                </div>
+              );
+            })()}
             {progressPercent !== null && (
               <div className="space-y-1">
                 <div className="flex justify-between text-xs text-gray-500">

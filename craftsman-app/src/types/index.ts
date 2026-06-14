@@ -14,6 +14,7 @@ export interface Project {
   description?: string;
   status: ProjectStatus;
   responsibleId?: string;
+  budget?: number;
   startDate?: string;
   endDate?: string;
   createdAt: string;
