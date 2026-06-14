@@ -10,6 +10,7 @@ import { Tabs } from '../components/ui/Tabs';
 import Badge from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import ActionSheet from '../components/ui/ActionSheet';
+import { useAdmin } from '../context/AdminContext';
 import {
   useRegiReport, useRegiPositions,
   createRegiReport, updateRegiReport, signRegiReport,
@@ -52,6 +53,7 @@ export default function RegiReportForm() {
   const materials = useMaterials();
   const machines = useMachines();
 
+  const { isAdmin } = useAdmin();
   const [activeTab, setActiveTab] = useState('info');
   const [saving, setSaving] = useState(false);
   const [reportId, setReportId] = useState(id);
@@ -246,12 +248,19 @@ export default function RegiReportForm() {
   const vatAmount = netTotal * (Number(form.vatRate) / 100);
   const grossTotal = netTotal + vatAmount;
 
-  const tabs = [
-    { id: 'info', label: 'Info' },
-    { id: 'positions', label: `Positionen (${positions?.length ?? 0})` },
-    { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
-    { id: 'summary', label: 'Abschluss' },
-  ];
+  const tabs = isAdmin
+    ? [
+        { id: 'info', label: 'Info' },
+        { id: 'positions', label: `Positionen (${positions?.length ?? 0})` },
+        { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
+        { id: 'summary', label: 'Abschluss' },
+      ]
+    : [
+        { id: 'info', label: 'Info' },
+        { id: 'positions', label: `Positionen (${positions?.length ?? 0})` },
+        { id: 'photos', label: `Fotos (${photos?.length ?? 0})`, icon: <Image size={14} /> },
+        { id: 'summary', label: report?.customerSignature ? 'Unterschrift ✓' : 'Unterschrift' },
+      ];
 
   return (
     <div>
@@ -321,37 +330,39 @@ export default function RegiReportForm() {
 
         {activeTab === 'summary' && (
           <div className="space-y-4">
-            {/* Totals summary */}
-            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-              <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
-                <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Zusammenfassung</h3>
+            {/* Totals summary — admin only */}
+            {isAdmin && (
+              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+                <div className="px-4 py-3 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600">
+                  <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Zusammenfassung</h3>
+                </div>
+                {Object.entries(positionsByType).map(([type, pos]) => {
+                  const typeLabels: Record<string, string> = { labor: 'Arbeit', material: 'Material', machine: 'Maschinen', extra: 'Zusatz' };
+                  const subtotal = pos?.reduce((s, p) => s + p.total, 0) ?? 0;
+                  if (!pos || pos.length === 0) return null;
+                  return (
+                    <div key={type} className="px-4 py-2.5 flex justify-between border-b border-gray-50 dark:border-gray-700">
+                      <span className="text-sm text-gray-600 dark:text-gray-300">{typeLabels[type]}</span>
+                      <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
+                    </div>
+                  );
+                })}
+                <div className="px-4 py-2.5 flex justify-between border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Nettototal</span>
+                  <span className="text-sm font-semibold">{formatCurrency(netTotal)}</span>
+                </div>
+                <div className="px-4 py-2.5 flex justify-between border-b border-gray-100 dark:border-gray-700">
+                  <span className="text-sm text-gray-600 dark:text-gray-300">MWST {form.vatRate}%</span>
+                  <span className="text-sm">{formatCurrency(vatAmount)}</span>
+                </div>
+                <div className="px-4 py-3 flex justify-between bg-primary-50 dark:bg-primary-900/30">
+                  <span className="font-bold text-primary-900">Gesamttotal</span>
+                  <span className="font-bold text-xl text-primary-900">{formatCurrency(grossTotal)}</span>
+                </div>
               </div>
-              {Object.entries(positionsByType).map(([type, pos]) => {
-                const typeLabels: Record<string, string> = { labor: 'Arbeit', material: 'Material', machine: 'Maschinen', extra: 'Zusatz' };
-                const subtotal = pos?.reduce((s, p) => s + p.total, 0) ?? 0;
-                if (!pos || pos.length === 0) return null;
-                return (
-                  <div key={type} className="px-4 py-2.5 flex justify-between border-b border-gray-50 dark:border-gray-700">
-                    <span className="text-sm text-gray-600 dark:text-gray-300">{typeLabels[type]}</span>
-                    <span className="text-sm font-medium">{formatCurrency(subtotal)}</span>
-                  </div>
-                );
-              })}
-              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm font-semibold text-gray-800 dark:text-gray-100">Nettototal</span>
-                <span className="text-sm font-semibold">{formatCurrency(netTotal)}</span>
-              </div>
-              <div className="px-4 py-2.5 flex justify-between border-b border-gray-100 dark:border-gray-700">
-                <span className="text-sm text-gray-600 dark:text-gray-300">MWST {form.vatRate}%</span>
-                <span className="text-sm">{formatCurrency(vatAmount)}</span>
-              </div>
-              <div className="px-4 py-3 flex justify-between bg-primary-50 dark:bg-primary-900/30">
-                <span className="font-bold text-primary-900">Gesamttotal</span>
-                <span className="font-bold text-xl text-primary-900">{formatCurrency(grossTotal)}</span>
-              </div>
-            </div>
+            )}
 
-            {/* Signature */}
+            {/* Signature — always visible */}
             <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
               <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Kundenbestätigung</h3>
               {report?.customerSignature ? (
@@ -387,26 +398,29 @@ export default function RegiReportForm() {
               )}
             </div>
 
-            {/* Status-Flow */}
-            {report?.status === 'signed' && (
-              <Button variant="secondary" className="w-full" onClick={handleMarkInvoiced}>
-                <Receipt size={16} /> Als verrechnet markieren
-              </Button>
+            {/* Status-Flow + PDF — admin only */}
+            {isAdmin && (
+              <>
+                {report?.status === 'signed' && (
+                  <Button variant="secondary" className="w-full" onClick={handleMarkInvoiced}>
+                    <Receipt size={16} /> Als verrechnet markieren
+                  </Button>
+                )}
+                {(report?.status === 'signed' || report?.status === 'invoiced') && (
+                  <Button variant="outline" className="w-full" onClick={handleInvoicePdf}>
+                    <FileText size={16} /> Rechnung erstellen (PDF)
+                  </Button>
+                )}
+                {report?.status === 'invoiced' && (
+                  <div className="flex justify-center">
+                    <Badge variant="info" className="text-sm py-2 px-4">✓ Verrechnet</Badge>
+                  </div>
+                )}
+                <Button variant="outline" className="w-full" onClick={handleDownload}>
+                  <Download size={16} /> PDF erstellen & speichern
+                </Button>
+              </>
             )}
-            {(report?.status === 'signed' || report?.status === 'invoiced') && (
-              <Button variant="outline" className="w-full" onClick={handleInvoicePdf}>
-                <FileText size={16} /> Rechnung erstellen (PDF)
-              </Button>
-            )}
-            {report?.status === 'invoiced' && (
-              <div className="flex justify-center">
-                <Badge variant="info" className="text-sm py-2 px-4">✓ Verrechnet</Badge>
-              </div>
-            )}
-
-            <Button variant="outline" className="w-full" onClick={handleDownload}>
-              <Download size={16} /> PDF erstellen & speichern
-            </Button>
           </div>
         )}
       </div>
@@ -500,6 +514,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
   machines: Machine[];
   projectId: string;
 }) {
+  const { isAdmin } = useAdmin();
   const [adding, setAdding] = useState(false);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const dailyReports = useDailyReports(projectId || undefined);
@@ -560,7 +575,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
           <div key={group.value} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
             <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-700 flex justify-between">
               <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{group.label}</span>
-              <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(subtotal)}</span>
+              {isAdmin && <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(subtotal)}</span>}
             </div>
             {group.items.map((pos, i) => (
               <div key={pos.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 dark:border-gray-700 last:border-0">
@@ -569,10 +584,12 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
                     <span className="text-xs text-gray-400 font-mono">{i + 1}.</span>
                     <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
                   </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 ml-5">{pos.quantity} {pos.unit} × {formatCurrency(pos.unitPrice)}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400 ml-5">
+                    {pos.quantity} {pos.unit}{isAdmin && ` × ${formatCurrency(pos.unitPrice)}`}
+                  </div>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
-                  <span className="font-bold text-sm">{formatCurrency(pos.total)}</span>
+                  {isAdmin && <span className="font-bold text-sm">{formatCurrency(pos.total)}</span>}
                   <button onClick={() => deleteRegiPosition(pos.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
                     <Trash2 size={14} />
                   </button>
@@ -606,14 +623,16 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
             />
           )}
           <Input label="Beschreibung *" value={form.description} onChange={set('description')} placeholder="z.B. Mauerwerk erstellen" />
-          <div className="grid grid-cols-3 gap-2">
+          <div className={`grid gap-2 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
             <Input label="Menge" type="number" value={form.quantity} onChange={set('quantity')} />
             <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={form.unit} onChange={set('unit')} />
-            <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />
+            {isAdmin && <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />}
           </div>
-          <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
-            Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
-          </div>
+          {isAdmin && (
+            <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
+              Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
+            </div>
+          )}
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Hinzufügen</Button>
             <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>

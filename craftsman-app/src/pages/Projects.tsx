@@ -6,6 +6,7 @@ import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import { useProjects } from '../hooks/useProjects';
+import { useAdmin } from '../context/AdminContext';
 import type { ProjectStatus } from '../types';
 import { cn } from '../utils';
 
@@ -28,6 +29,7 @@ function ProjectStatusBadge({ status }: { status: ProjectStatus }) {
 
 export default function Projects() {
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('active');
   const [search, setSearch] = useState('');
 
@@ -57,9 +59,11 @@ export default function Projects() {
               className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
             />
           </div>
-          <Button onClick={() => navigate('/projects/new')} size="sm">
-            <Plus size={16} /> Neu
-          </Button>
+          {isAdmin && (
+            <Button onClick={() => navigate('/projects/new')} size="sm">
+              <Plus size={16} /> Neu
+            </Button>
+          )}
         </div>
 
         {/* Status filter */}

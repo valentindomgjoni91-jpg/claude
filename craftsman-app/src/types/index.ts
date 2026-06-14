@@ -168,6 +168,7 @@ export interface Company {
   logoUrl?: string;
   bankAccount?: string;
   footerText?: string;
+  adminPin?: string;
 }
 
 export interface SyncQueueItem {

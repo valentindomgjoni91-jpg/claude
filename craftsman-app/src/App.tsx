@@ -13,6 +13,7 @@ import MasterData from './pages/MasterData';
 import { seedDefaultData, cleanupDemoData } from './db';
 import { LanguageProvider } from './i18n';
 import { ThemeProvider } from './hooks/useTheme';
+import { AdminProvider } from './context/AdminContext';
 
 export default function App() {
   useEffect(() => {
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <ThemeProvider>
     <LanguageProvider>
+    <AdminProvider>
       <BrowserRouter>
         <Routes>
           <Route element={<AppLayout />}>
@@ -42,6 +44,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+    </AdminProvider>
     </LanguageProvider>
     </ThemeProvider>
   );

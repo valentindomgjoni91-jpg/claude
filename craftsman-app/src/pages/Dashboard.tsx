@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { useAdmin } from '../context/AdminContext';
 import { FileText, Clock, FolderKanban, ChevronRight, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
@@ -17,6 +18,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isAdmin } = useAdmin();
   const today = todayISO();
 
   const activeProjects = useLiveQuery(() =>
@@ -144,24 +146,28 @@ export default function Dashboard() {
             <FileText size={20} />
             <span className="text-xs">Regierapport</span>
           </Button>
-          <Button
-            onClick={() => navigate('/projects/new')}
-            variant="secondary"
-            size="lg"
-            className="flex-col gap-1 h-16"
-          >
-            <FolderKanban size={20} />
-            <span className="text-xs">Projekt anlegen</span>
-          </Button>
-          <Button
-            onClick={() => navigate('/timetracking')}
-            variant="secondary"
-            size="lg"
-            className="flex-col gap-1 h-16"
-          >
-            <Clock size={20} />
-            <span className="text-xs">Zeiterfassung</span>
-          </Button>
+          {isAdmin && (
+            <Button
+              onClick={() => navigate('/projects/new')}
+              variant="secondary"
+              size="lg"
+              className="flex-col gap-1 h-16"
+            >
+              <FolderKanban size={20} />
+              <span className="text-xs">Projekt anlegen</span>
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              onClick={() => navigate('/timetracking')}
+              variant="secondary"
+              size="lg"
+              className="flex-col gap-1 h-16"
+            >
+              <Clock size={20} />
+              <span className="text-xs">Zeiterfassung</span>
+            </Button>
+          )}
         </div>
       </Card>
 

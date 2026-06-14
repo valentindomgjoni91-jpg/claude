@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useAdmin } from '../context/AdminContext';
 import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
 import { useLanguage, LANGUAGE_NAMES, type Lang } from '../i18n';
 import { exportProjectsCSV, exportRegiReportsCSV, exportTimeEntriesCSV } from '../utils/csvExport';
@@ -30,8 +32,14 @@ const ROLE_OPTIONS: { value: EmployeeRole; label: string }[] = [
 ];
 
 export default function MasterData() {
+  const { isAdmin } = useAdmin();
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('company');
   const { t } = useLanguage();
+
+  useEffect(() => {
+    if (!isAdmin) navigate('/', { replace: true });
+  }, [isAdmin, navigate]);
 
   const tabs = [
     { id: 'company', label: t('tab.company'), icon: <Building2 size={14} /> },
@@ -63,7 +71,7 @@ function CompanyTab() {
   const [form, setForm] = useState({
     name: '', street: '', city: '', zip: '', phone: '',
     email: '', website: '', vatNumber: '', footerText: '',
-    logoUrl: '', bankAccount: '',
+    logoUrl: '', bankAccount: '', adminPin: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -82,6 +90,7 @@ function CompanyTab() {
         footerText: company.footerText || '',
         logoUrl: company.logoUrl || '',
         bankAccount: company.bankAccount || '',
+        adminPin: company.adminPin || '',
       });
     }
   }, [company]);
@@ -161,6 +170,19 @@ function CompanyTab() {
             </button>
           ))}
         </div>
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Admin-PIN</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          PIN schützt Einstellungen und Preise. Leer lassen = kein PIN (jeder kann Admin-Modus aktivieren).
+        </p>
+        <Input
+          label="Admin-PIN (Ziffern empfohlen)"
+          type="password"
+          value={form.adminPin}
+          onChange={set('adminPin')}
+          placeholder="z.B. 1234"
+        />
       </div>
       <Button className="w-full" loading={saving} onClick={handleSave}>
         <Check size={16} /> Firmendaten speichern
