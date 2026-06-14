@@ -16,7 +16,7 @@ export function useSyncStatus() {
   const supabaseIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const pendingCount = useLiveQuery(
-    () => db.syncQueue.where('synced').equals(0).count(),
+    () => db.syncQueue.filter(item => !item.synced).count(),
     []
   );
 

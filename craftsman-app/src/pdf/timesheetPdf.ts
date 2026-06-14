@@ -75,8 +75,8 @@ export function generateTimesheetPdf(data: TimesheetPdfData): jsPDF {
   doc.setTextColor(0, 0, 0);
 
   // Stats summary
-  const totalHours = entries.reduce((s, e) => s + e.totalHours, 0);
-  const estimatedPay = totalHours * employee.hourlyRate;
+  const totalHours = entries.reduce((s, e) => s + (e.totalHours ?? 0), 0);
+  const estimatedPay = totalHours * (employee.hourlyRate ?? 0);
   const workDays = new Set(entries.map(e => e.date)).size;
 
   doc.setFillColor(243, 244, 246);
@@ -141,7 +141,7 @@ export function generateTimesheetPdf(data: TimesheetPdfData): jsPDF {
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(55, 65, 81);
-  doc.text(`Stundensatz: CHF ${employee.hourlyRate.toFixed(2)}/h`, margin, y);
+  doc.text(`Stundensatz: CHF ${(employee.hourlyRate ?? 0).toFixed(2)}/h`, margin, y);
   y += 14;
 
   doc.setDrawColor(180, 180, 180);

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
 import { useLanguage, LANGUAGE_NAMES, type Lang } from '../i18n';
 import { exportProjectsCSV, exportRegiReportsCSV, exportTimeEntriesCSV } from '../utils/csvExport';
@@ -64,25 +64,26 @@ function CompanyTab() {
     email: '', website: '', vatNumber: '', footerText: '',
     logoUrl: '', bankAccount: '',
   });
-  const [loaded, setLoaded] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  if (company && !loaded) {
-    setForm({
-      name: company.name || '',
-      street: company.street || '',
-      city: company.city || '',
-      zip: company.zip || '',
-      phone: company.phone || '',
-      email: company.email || '',
-      website: company.website || '',
-      vatNumber: company.vatNumber || '',
-      footerText: company.footerText || '',
-      logoUrl: company.logoUrl || '',
-      bankAccount: company.bankAccount || '',
-    });
-    setLoaded(true);
-  }
+  useEffect(() => {
+    if (company) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setForm({
+        name: company.name || '',
+        street: company.street || '',
+        city: company.city || '',
+        zip: company.zip || '',
+        phone: company.phone || '',
+        email: company.email || '',
+        website: company.website || '',
+        vatNumber: company.vatNumber || '',
+        footerText: company.footerText || '',
+        logoUrl: company.logoUrl || '',
+        bankAccount: company.bankAccount || '',
+      });
+    }
+  }, [company]);
 
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));

@@ -1,4 +1,4 @@
-import { Outlet, NavLink, useLocation } from 'react-router-dom';
+import { Outlet, NavLink } from 'react-router-dom';
 import { LayoutDashboard, FolderKanban, Clock, FileText, Settings, Wifi, WifiOff, Sun, Moon } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAppStore } from '../../stores/useAppStore';
@@ -8,7 +8,6 @@ import { useLanguage } from '../../i18n';
 import { useTheme } from '../../hooks/useTheme';
 
 export default function AppLayout() {
-  const location = useLocation();
   const { isOnline, syncPending, setOnline } = useAppStore();
   const { t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
@@ -71,26 +70,26 @@ export default function AppLayout() {
 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex safe-area-bottom z-30">
-        {navItems.map(({ to, label, icon: Icon }) => {
-          const isActive = to === '/'
-            ? location.pathname === '/'
-            : location.pathname.startsWith(to);
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              className={cn(
-                'flex flex-col items-center justify-center flex-1 py-2 gap-0.5 min-h-[56px] transition-colors',
-                isActive
-                  ? 'text-primary-600 dark:text-primary-400'
-                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-              )}
-            >
-              <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />
-              <span className="text-[10px] font-medium">{label}</span>
-            </NavLink>
-          );
-        })}
+        {navItems.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => cn(
+              'flex flex-col items-center justify-center flex-1 py-2 gap-0.5 min-h-[56px] transition-colors',
+              isActive
+                ? 'text-primary-600 dark:text-primary-400'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            )}
+          >
+            {({ isActive }) => (
+              <>
+                <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />
+                <span className="text-[10px] font-medium">{label}</span>
+              </>
+            )}
+          </NavLink>
+        ))}
       </nav>
     </div>
   );

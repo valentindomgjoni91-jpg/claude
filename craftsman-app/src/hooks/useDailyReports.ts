@@ -7,7 +7,7 @@ import type { DailyReport, TimeEntry, MaterialEntry, MachineEntry, Subcontractor
 export function useDailyReports(projectId?: string) {
   return useLiveQuery(
     () => projectId
-      ? db.dailyReports.where('projectId').equals(projectId).reverse().sortBy('date')
+      ? db.dailyReports.where('projectId').equals(projectId).sortBy('date').then(arr => arr.reverse())
       : db.dailyReports.orderBy('date').reverse().toArray(),
     [projectId]
   );

@@ -1,6 +1,7 @@
-import { type ReactNode, useEffect } from 'react';
+import { type ReactNode } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '../../utils';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 export interface ActionSheetItem {
   icon: ReactNode;
@@ -19,11 +20,7 @@ interface ActionSheetProps {
 }
 
 export default function ActionSheet({ open, onClose, title, items }: ActionSheetProps) {
-  useEffect(() => {
-    if (open) document.body.style.overflow = 'hidden';
-    else document.body.style.overflow = '';
-    return () => { document.body.style.overflow = ''; };
-  }, [open]);
+  useScrollLock(open);
 
   if (!open) return null;
 

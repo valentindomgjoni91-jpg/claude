@@ -7,7 +7,7 @@ import type { RegiReport, RegiPosition } from '../types';
 export function useRegiReports(projectId?: string) {
   return useLiveQuery(
     () => projectId
-      ? db.regiReports.where('projectId').equals(projectId).reverse().sortBy('date')
+      ? db.regiReports.where('projectId').equals(projectId).sortBy('date').then(arr => arr.reverse())
       : db.regiReports.orderBy('date').reverse().toArray(),
     [projectId]
   );

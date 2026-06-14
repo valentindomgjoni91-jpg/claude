@@ -115,10 +115,10 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
       body: group.map((p, i) => [
         (i + 1).toString(),
         p.description,
-        p.quantity.toString(),
-        p.unit,
-        formatCurrency(p.unitPrice),
-        formatCurrency(p.total),
+        (p.quantity ?? 0).toString(),
+        p.unit ?? '–',
+        formatCurrency(p.unitPrice ?? 0),
+        formatCurrency(p.total ?? 0),
       ]),
       styles: { fontSize: 8.5, cellPadding: 2.5 },
       headStyles: { fillColor: [243, 244, 246], textColor: [55, 65, 81], fontStyle: 'bold' },
@@ -130,7 +130,7 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
     });
     y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 4;
 
-    const groupTotal = group.reduce((s, p) => s + p.total, 0);
+    const groupTotal = group.reduce((s, p) => s + (p.total ?? 0), 0);
     totals[type] = groupTotal;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
@@ -213,8 +213,12 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
     y += 5;
     const imgWidth = (pageWidth - margin * 2 - 5) / 2;
     const imgHeight = imgWidth * 0.6;
+    const pageHeight = doc.internal.pageSize.getHeight();
     photosToShow.forEach((photo, i) => {
-      if (i > 0 && i % 2 === 0) y += imgHeight + 5;
+      if (i > 0 && i % 2 === 0) {
+        y += imgHeight + 5;
+        if (y + imgHeight > pageHeight - margin) { doc.addPage(); y = margin; }
+      }
       const x = i % 2 === 0 ? margin : margin + imgWidth + 5;
       try {
         doc.addImage(photo.dataUrl, 'JPEG', x, y, imgWidth, imgHeight);
@@ -239,11 +243,12 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   doc.text('Hiermit bestätige ich die korrekte Ausführung der oben aufgeführten Arbeiten und Leistungen.', margin, y);
   y += 10;
 
-  if (report.customerSignature) {
+  if (report.customerSignature?.trim()) {
     try {
       const sigWidth = 70;
       const sigHeight = 25;
-      doc.addImage(report.customerSignature, 'PNG', margin, y, sigWidth, sigHeight);
+      const sigFmt = report.customerSignature.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      doc.addImage(report.customerSignature, sigFmt, margin, y, sigWidth, sigHeight);
       doc.setDrawColor(180, 180, 180);
       doc.line(margin, y + sigHeight + 1, margin + sigWidth, y + sigHeight + 1);
       doc.setFontSize(7.5);

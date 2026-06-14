@@ -87,19 +87,27 @@ export default function RegiReportForm() {
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const ensureReport = async (): Promise<string> => {
-    if (reportId) return reportId;
-    const newId = await createRegiReport({
+  const reportIdRef = useRef<string | undefined>(id);
+  const creatingReportRef = useRef<Promise<string> | null>(null);
+
+  const ensureReport = (): Promise<string> => {
+    if (reportIdRef.current) return Promise.resolve(reportIdRef.current);
+    if (creatingReportRef.current) return creatingReportRef.current;
+    creatingReportRef.current = createRegiReport({
       projectId: form.projectId,
       date: form.date,
       title: form.title,
       laborConditions: form.laborConditions,
       vatRate: Number(form.vatRate),
       status: 'draft',
+    }).then(newId => {
+      reportIdRef.current = newId;
+      setReportId(newId);
+      navigate(`/regierapport/${newId}`, { replace: true });
+      creatingReportRef.current = null;
+      return newId;
     });
-    setReportId(newId);
-    navigate(`/regierapport/${newId}`, { replace: true });
-    return newId;
+    return creatingReportRef.current;
   };
 
   const handleSave = async () => {
@@ -116,9 +124,12 @@ export default function RegiReportForm() {
         await updateRegiReport(reportId, data);
       } else {
         const newId = await createRegiReport({ ...data, status: 'draft' });
+        reportIdRef.current = newId;
         setReportId(newId);
         navigate(`/regierapport/${newId}`, { replace: true });
       }
+    } catch (e) {
+      alert(`Fehler beim Speichern: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
     } finally {
       setSaving(false);
     }

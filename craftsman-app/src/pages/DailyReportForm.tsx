@@ -90,8 +90,12 @@ export default function DailyReportForm() {
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }));
 
-  const ensureReport = async (): Promise<string> => {
-    if (reportId) return reportId;
+  const reportIdRef = useRef<string | undefined>(id);
+  const creatingReportRef = useRef<Promise<string> | null>(null);
+
+  const ensureReport = (): Promise<string> => {
+    if (reportIdRef.current) return Promise.resolve(reportIdRef.current);
+    if (creatingReportRef.current) return creatingReportRef.current;
     const data = {
       projectId: form.projectId,
       date: form.date,
@@ -101,10 +105,14 @@ export default function DailyReportForm() {
       notes: form.notes || undefined,
       status: form.status,
     };
-    const newId = await createDailyReport(data);
-    setReportId(newId);
-    navigate(`/tagesrapport/${newId}`, { replace: true });
-    return newId;
+    creatingReportRef.current = createDailyReport(data).then(newId => {
+      reportIdRef.current = newId;
+      setReportId(newId);
+      navigate(`/tagesrapport/${newId}`, { replace: true });
+      creatingReportRef.current = null;
+      return newId;
+    });
+    return creatingReportRef.current;
   };
 
   const handleSign = async () => {
@@ -132,9 +140,12 @@ export default function DailyReportForm() {
         if (complete) setForm(f => ({ ...f, status: 'completed' }));
       } else {
         const newId = await createDailyReport(data);
+        reportIdRef.current = newId;
         setReportId(newId);
         navigate(`/tagesrapport/${newId}`, { replace: true });
       }
+    } catch (e) {
+      alert(`Fehler beim Speichern: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
     } finally {
       setSaving(false);
     }
@@ -274,6 +285,7 @@ export default function DailyReportForm() {
             employeeOptions={employeeOptions}
             onEnsureReport={ensureReport}
             totalHours={totalHours}
+            reportDate={form.date}
           />
         )}
         {activeTab === 'material' && (
@@ -481,9 +493,10 @@ interface TimeTabProps {
   employeeOptions: { value: string; label: string }[];
   onEnsureReport: () => Promise<string>;
   totalHours: number;
+  reportDate: string;
 }
 
-function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeTabProps) {
+function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours, reportDate }: TimeTabProps) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({
     employeeId: '',
@@ -505,7 +518,7 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours }: TimeT
       reportId: rId,
       reportType: 'daily',
       employeeId: form.employeeId,
-      date: todayISO(),
+      date: reportDate,
       startTime: form.startTime,
       endTime: form.endTime,
       breakMinutes: Number(form.breakMinutes),

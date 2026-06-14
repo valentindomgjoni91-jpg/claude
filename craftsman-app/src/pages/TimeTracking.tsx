@@ -548,27 +548,29 @@ function TimesheetTab() {
     const monthStart = startOfMonth(new Date(`${month}-01`)).toISOString().split('T')[0];
     const monthEnd = endOfMonth(new Date(`${month}-01`)).toISOString().split('T')[0];
 
-    const allReports = await db.dailyReports.where('date').between(monthStart, monthEnd, true, true).toArray();
-    const reportIds = allReports.map(r => r.id);
-    if (reportIds.length === 0) return { entries: [], totalHours: 0 };
-
+    // Query time entries directly by date — covers daily-report, timer, and manual entries
     const timeEntries = await db.timeEntries
-      .where('reportId').anyOf(reportIds)
+      .where('date').between(monthStart, monthEnd, true, true)
       .filter(e => e.employeeId === selectedEmp)
       .toArray();
 
-    const projects = await db.projects.toArray();
+    if (timeEntries.length === 0) return { entries: [], totalHours: 0 };
+
+    const [allReports, projects] = await Promise.all([
+      db.dailyReports.toArray(),
+      db.projects.toArray(),
+    ]);
     const projMap = Object.fromEntries(projects.map(p => [p.id, p]));
     const reportMap = Object.fromEntries(allReports.map(r => [r.id, r]));
 
     const entries: TimesheetEntry[] = timeEntries
-      .sort((a, b) => (reportMap[a.reportId]?.date ?? '').localeCompare(reportMap[b.reportId]?.date ?? ''))
+      .sort((a, b) => a.date.localeCompare(b.date))
       .map(e => {
         const report = reportMap[e.reportId];
         const project = report ? projMap[report.projectId] : undefined;
         return {
-          date: report?.date ?? e.date,
-          reportTitle: report?.title ?? '–',
+          date: e.date,
+          reportTitle: report?.title ?? (e.activity ?? '–'),
           projectTitle: project?.title ?? 'Ohne Projekt',
           startTime: e.startTime,
           endTime: e.endTime,
@@ -578,7 +580,7 @@ function TimesheetTab() {
         };
       });
 
-    return { entries, totalHours: entries.reduce((s, e) => s + e.totalHours, 0) };
+    return { entries, totalHours: entries.reduce((s, e) => s + (e.totalHours ?? 0), 0) };
   }, [selectedEmp, month]);
 
   const handleGenerate = async () => {

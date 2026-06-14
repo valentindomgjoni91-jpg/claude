@@ -37,6 +37,7 @@ export default function App() {
             <Route path="timetracking" element={<TimeTracking />} />
             <Route path="archive" element={<Archive />} />
             <Route path="masterdata" element={<MasterData />} />
+            <Route path="*" element={<div className="p-8 text-center text-gray-500 dark:text-gray-400">Seite nicht gefunden.</div>} />
           </Route>
         </Routes>
       </BrowserRouter>

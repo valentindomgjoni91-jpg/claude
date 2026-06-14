@@ -65,6 +65,8 @@ export default function ProjectForm() {
         const newId = await createProject({ ...payload, status: 'active' });
         navigate(`/projects/${newId}`);
       }
+    } catch (e) {
+      alert(`Fehler beim Speichern: ${e instanceof Error ? e.message : 'Unbekannter Fehler'}`);
     } finally {
       setSaving(false);
     }

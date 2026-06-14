@@ -20,8 +20,12 @@ describe('calcTotalHours', () => {
     expect(calcTotalHours('08:00', '16:00', 60)).toBe(7);
   });
 
-  it('returns 0 for invalid range (end before start)', () => {
-    expect(calcTotalHours('17:00', '07:00', 0)).toBe(0);
+  it('handles midnight-crossing shift (17:00 → 07:00 = 14h overnight)', () => {
+    expect(calcTotalHours('17:00', '07:00', 0)).toBe(14);
+  });
+
+  it('handles midnight-crossing short shift (22:00 → 06:00 = 8h)', () => {
+    expect(calcTotalHours('22:00', '06:00', 0)).toBe(8);
   });
 
   it('calculates half-day correctly', () => {

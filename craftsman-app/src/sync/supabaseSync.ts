@@ -130,8 +130,8 @@ async function pullTable(
     .select('record_id, data, data_updated_at')
     .eq('table_name', entry.key);
 
-  // Incremental: only fetch records pushed after our last pull
-  if (since) query = query.gt('synced_at', since);
+  // Incremental: fetch records pushed at or after our last pull (gte avoids off-by-one at ms boundary)
+  if (since) query = query.gte('synced_at', since);
 
   const { data, error } = await query;
   if (error) throw new Error(`Pull ${entry.key}: ${error.message}`);
@@ -155,7 +155,8 @@ async function pullTable(
       if (remoteUpdated && localUpdated && remoteUpdated > localUpdated) {
         toMerge.push(remote);
       } else if (!localUpdated && !remoteUpdated) {
-        // Neither has a timestamp — keep local (already pushed our version)
+        // Neither has a timestamp — take remote to avoid silently discarding cross-device changes
+        toMerge.push(remote);
       }
       // else local is same/newer — skip
     }

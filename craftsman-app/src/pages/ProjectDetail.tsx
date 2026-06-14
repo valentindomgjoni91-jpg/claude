@@ -104,7 +104,8 @@ export default function ProjectDetail() {
     pdf.save(`Projektbericht_${project.title.replace(/\s+/g, '_')}.pdf`);
   };
 
-  if (!project) return <div className="p-4 text-gray-500 dark:text-gray-400">Projekt nicht gefunden.</div>;
+  if (project === undefined) return <div className="p-4 text-gray-400 dark:text-gray-500">Laden…</div>;
+  if (project === null) return <div className="p-4 text-gray-500 dark:text-gray-400">Projekt nicht gefunden.</div>;
 
   return (
     <div>
