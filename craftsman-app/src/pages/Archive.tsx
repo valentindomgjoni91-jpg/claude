@@ -179,14 +179,15 @@ export default function Archive() {
         const pdf = await generateDailyReportPdf({ report: rpt, project: proj, timeEntries: times, materialEntries: mats, machineEntries: machEntries, subcontractorEntries: subs, photos, employees: emps, machines: machs, company: co ?? null });
         pdf.save(`Tagesrapport_${rpt.date}.pdf`);
       } else {
-        const [rpt, proj, positions, co] = await Promise.all([
+        const [rpt, proj, positions, co, photos] = await Promise.all([
           db.regiReports.get(preview.report.id),
           db.projects.get(preview.report.projectId),
           db.regiPositions.where('regiReportId').equals(preview.report.id).toArray(),
           db.company.toCollection().first(),
+          db.photos.where('reportId').equals(preview.report.id).sortBy('timestamp'),
         ]);
         if (!rpt || !proj) return;
-        const pdf = await generateRegiReportPdf({ report: rpt, project: proj, positions, company: co ?? null });
+        const pdf = await generateRegiReportPdf({ report: rpt, project: proj, positions, company: co ?? null, photos });
         pdf.save(`Regierapport_${rpt.date}.pdf`);
       }
     } finally {

@@ -3,7 +3,7 @@ import { db } from '../db';
 import { nowISO } from '../utils';
 import type {
   Project, DailyReport, TimeEntry, MaterialEntry, MachineEntry,
-  SubcontractorEntry, RegiReport, RegiPosition, Employee, Machine, Material, Company,
+  SubcontractorEntry, Photo, RegiReport, RegiPosition, Employee, Machine, Material, Company,
 } from '../types';
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -89,6 +89,7 @@ const SYNC_TABLES: SyncEntry[] = [
   { key: 'materialEntries',     getAll: () => db.materialEntries.toArray() as Promise<AnyRecord[]>,     putMany: (r) => db.materialEntries.bulkPut(r as MaterialEntry[]).then() },
   { key: 'machineEntries',      getAll: () => db.machineEntries.toArray() as Promise<AnyRecord[]>,      putMany: (r) => db.machineEntries.bulkPut(r as MachineEntry[]).then() },
   { key: 'subcontractorEntries',getAll: () => db.subcontractorEntries.toArray() as Promise<AnyRecord[]>,putMany: (r) => db.subcontractorEntries.bulkPut(r as SubcontractorEntry[]).then() },
+  { key: 'photos',              getAll: () => db.photos.toArray() as Promise<AnyRecord[]>,              putMany: (r) => db.photos.bulkPut(r as Photo[]).then() },
   { key: 'regiReports',         getAll: () => db.regiReports.toArray() as Promise<AnyRecord[]>,         putMany: (r) => db.regiReports.bulkPut(r as RegiReport[]).then() },
   { key: 'regiPositions',       getAll: () => db.regiPositions.toArray() as Promise<AnyRecord[]>,       putMany: (r) => db.regiPositions.bulkPut(r as RegiPosition[]).then() },
   { key: 'employees',           getAll: () => db.employees.toArray() as Promise<AnyRecord[]>,           putMany: (r) => db.employees.bulkPut(r as Employee[]).then() },

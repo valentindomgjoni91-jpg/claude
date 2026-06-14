@@ -22,13 +22,16 @@ export async function duplicateDailyReport(sourceId: string): Promise<string> {
   const now = nowISO();
   const today = todayISO();
 
-  // Copy report header with new date and draft status
+  // Copy report header with new date and draft status; clear signature
   await db.dailyReports.add({
     ...source,
     id: newId,
     date: today,
     title: `Kopie – ${source.title}`,
     status: 'draft',
+    customerSignature: undefined,
+    customerName: undefined,
+    signedAt: undefined,
     createdAt: now,
     updatedAt: now,
   });

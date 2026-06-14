@@ -749,25 +749,6 @@ function SyncTab() {
         </div>
       )}
 
-      {/* ── CSV Export ──────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
-        <h3 className="font-semibold text-sm text-gray-700">Datenexport (CSV)</h3>
-        <p className="text-xs text-gray-500">
-          Daten als CSV-Datei für Excel / Buchhaltung exportieren.
-        </p>
-        <div className="space-y-2">
-          <Button variant="outline" className="w-full" onClick={() => exportProjectsCSV()}>
-            <Download size={16} /> Projekte exportieren
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => exportRegiReportsCSV()}>
-            <Download size={16} /> Regierapporte / Rechnungen
-          </Button>
-          <Button variant="outline" className="w-full" onClick={() => exportTimeEntriesCSV()}>
-            <Download size={16} /> Alle Stunden exportieren
-          </Button>
-        </div>
-      </div>
-
       {/* ── SQL migration ────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
         <div className="flex items-center justify-between">
