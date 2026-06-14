@@ -1,90 +1,77 @@
 import { useRef, useState, type ReactNode } from 'react';
 import { Trash2 } from 'lucide-react';
 
+const DELETE_WIDTH = 80;
+
 interface SwipeToDeleteProps {
   onDelete: () => void;
   children: ReactNode;
-  disabled?: boolean;
 }
 
-const THRESHOLD = 72; // px to reveal delete button
-
-export function SwipeToDelete({ onDelete, children, disabled }: SwipeToDeleteProps) {
+export function SwipeToDelete({ onDelete, children }: SwipeToDeleteProps) {
   const [offset, setOffset] = useState(0);
-  const [revealed, setRevealed] = useState(false);
   const startX = useRef(0);
   const startY = useRef(0);
-  const dragging = useRef(false);
-  const lockAxis = useRef<'x' | 'y' | null>(null);
+  const isDragging = useRef(false);
+  const axis = useRef<'x' | 'y' | null>(null);
+  const isRevealed = offset <= -DELETE_WIDTH / 2;
 
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (disabled) return;
+  const onTouchStart = (e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
-    dragging.current = true;
-    lockAxis.current = null;
+    isDragging.current = true;
+    axis.current = null;
   };
 
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!dragging.current || disabled) return;
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging.current) return;
     const dx = e.touches[0].clientX - startX.current;
     const dy = e.touches[0].clientY - startY.current;
-
-    if (!lockAxis.current) {
-      lockAxis.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
+    if (!axis.current) {
+      axis.current = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y';
     }
-    if (lockAxis.current === 'y') return;
-
+    if (axis.current === 'y') return;
     e.preventDefault();
-    const clamped = Math.max(-THRESHOLD, Math.min(0, dx + (revealed ? -THRESHOLD : 0)));
-    setOffset(clamped);
+    const base = isRevealed ? -DELETE_WIDTH : 0;
+    const next = Math.max(-DELETE_WIDTH, Math.min(0, base + dx));
+    setOffset(next);
   };
 
-  const handleTouchEnd = () => {
-    if (!dragging.current || disabled) return;
-    dragging.current = false;
-    if (offset < -THRESHOLD / 2) {
-      setOffset(-THRESHOLD);
-      setRevealed(true);
-    } else {
-      setOffset(0);
-      setRevealed(false);
-    }
+  const onTouchEnd = () => {
+    isDragging.current = false;
+    setOffset(offset < -DELETE_WIDTH / 2 ? -DELETE_WIDTH : 0);
   };
 
-  const handleDelete = () => {
-    setOffset(0);
-    setRevealed(false);
-    onDelete();
-  };
-
-  const handleBackdropClick = () => {
-    setOffset(0);
-    setRevealed(false);
-  };
+  const close = () => setOffset(0);
 
   return (
     <div className="relative overflow-hidden rounded-2xl">
-      {/* Red delete button behind */}
-      <div className="absolute inset-y-0 right-0 w-18 flex items-center justify-center bg-red-500 rounded-2xl px-4">
-        <button onClick={handleDelete} className="flex flex-col items-center gap-1 text-white">
-          <Trash2 size={18} />
-          <span className="text-[10px] font-medium">Löschen</span>
+      {/* Delete button — always behind, no z-index needed */}
+      <div
+        className="absolute inset-y-0 right-0 flex items-center justify-center bg-red-500 rounded-2xl"
+        style={{ width: DELETE_WIDTH }}
+      >
+        <button
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="flex flex-col items-center gap-1 text-white w-full h-full justify-center"
+        >
+          <Trash2 size={20} />
+          <span className="text-[10px] font-semibold">Löschen</span>
         </button>
       </div>
 
-      {/* Backdrop to close */}
-      {revealed && (
-        <div className="fixed inset-0 z-10" onClick={handleBackdropClick} />
-      )}
-
       {/* Swipeable content */}
       <div
-        className="relative z-20 transition-transform duration-200 ease-out"
-        style={{ transform: `translateX(${offset}px)` }}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        className="relative bg-white dark:bg-gray-800 rounded-2xl"
+        style={{
+          transform: `translateX(${offset}px)`,
+          transition: isDragging.current ? 'none' : 'transform 0.2s ease-out',
+        }}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onClick={isRevealed ? close : undefined}
       >
         {children}
       </div>
