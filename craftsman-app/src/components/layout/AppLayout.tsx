@@ -1,15 +1,17 @@
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Clock, FileText, Settings, Wifi, WifiOff } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Clock, FileText, Settings, Wifi, WifiOff, Sun, Moon } from 'lucide-react';
 import { cn } from '../../utils';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSyncStatus } from '../../sync/useSyncStatus';
 import { useEffect } from 'react';
 import { useLanguage } from '../../i18n';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function AppLayout() {
   const location = useLocation();
   const { isOnline, syncPending, setOnline } = useAppStore();
   const { t } = useLanguage();
+  const { theme, toggleTheme } = useTheme();
   useSyncStatus();
 
   const navItems = [
@@ -32,9 +34,9 @@ export default function AppLayout() {
   }, [setOnline]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 max-w-2xl mx-auto">
+    <div className="flex flex-col min-h-screen bg-gray-50 dark:bg-gray-900 max-w-2xl mx-auto">
       {/* Top Header */}
-      <header className="bg-primary-700 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
+      <header className="bg-primary-700 dark:bg-primary-900 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
             <span className="text-xs font-bold">HR</span>
@@ -52,6 +54,13 @@ export default function AppLayout() {
           ) : (
             <WifiOff size={16} className="text-red-300" />
           )}
+          <button
+            onClick={toggleTheme}
+            className="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+            aria-label="Dark mode umschalten"
+          >
+            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
         </div>
       </header>
 
@@ -61,7 +70,7 @@ export default function AppLayout() {
       </main>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white border-t border-gray-200 flex safe-area-bottom z-30">
+      <nav className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-2xl bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 flex safe-area-bottom z-30">
         {navItems.map(({ to, label, icon: Icon }) => {
           const isActive = to === '/'
             ? location.pathname === '/'
@@ -72,7 +81,9 @@ export default function AppLayout() {
               to={to}
               className={cn(
                 'flex flex-col items-center justify-center flex-1 py-2 gap-0.5 min-h-[56px] transition-colors',
-                isActive ? 'text-primary-600' : 'text-gray-500 hover:text-gray-700'
+                isActive
+                  ? 'text-primary-600 dark:text-primary-400'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
               )}
             >
               <Icon size={20} strokeWidth={isActive ? 2.5 : 1.5} />

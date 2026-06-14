@@ -9,7 +9,7 @@ export function Card({ className, padding = 'md', children, ...props }: CardProp
   const paddings = { none: '', sm: 'p-3', md: 'p-4' };
   return (
     <div
-      className={cn('bg-white rounded-2xl shadow-sm border border-gray-100', paddings[padding], className)}
+      className={cn('bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700', paddings[padding], className)}
       {...props}
     >
       {children}
@@ -27,7 +27,7 @@ export function CardHeader({ className, children, ...props }: HTMLAttributes<HTM
 
 export function CardTitle({ className, children, ...props }: HTMLAttributes<HTMLHeadingElement>) {
   return (
-    <h3 className={cn('font-semibold text-gray-900 text-base', className)} {...props}>
+    <h3 className={cn('font-semibold text-gray-900 dark:text-gray-100 text-base', className)} {...props}>
       {children}
     </h3>
   );

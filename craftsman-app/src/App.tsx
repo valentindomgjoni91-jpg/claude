@@ -12,6 +12,7 @@ import Archive from './pages/Archive';
 import MasterData from './pages/MasterData';
 import { seedDefaultData } from './db';
 import { LanguageProvider } from './i18n';
+import { ThemeProvider } from './hooks/useTheme';
 
 export default function App() {
   useEffect(() => {
@@ -19,6 +20,7 @@ export default function App() {
   }, []);
 
   return (
+    <ThemeProvider>
     <LanguageProvider>
       <BrowserRouter>
         <Routes>
@@ -39,5 +41,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </LanguageProvider>
+    </ThemeProvider>
   );
 }
