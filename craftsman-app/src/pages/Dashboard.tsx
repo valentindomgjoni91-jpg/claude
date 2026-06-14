@@ -1,12 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { FileText, Clock, FolderKanban, ChevronRight, Calendar, TrendingUp } from 'lucide-react';
+import { FileText, Clock, FolderKanban, ChevronRight, Calendar, TrendingUp, BarChart2 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { startOfWeek, endOfWeek } from 'date-fns';
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth } from 'date-fns';
 import { db } from '../db';
 import { Card } from '../components/ui/Card';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
-import { formatDate, formatHours, todayISO } from '../utils';
+import { formatDate, formatHours, formatCurrency, todayISO } from '../utils';
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'draft') return <Badge variant="warning">Entwurf</Badge>;
@@ -44,6 +44,37 @@ export default function Dashboard() {
   const projectMap = useLiveQuery(async () => {
     const projects = await db.projects.toArray();
     return Object.fromEntries(projects.map(p => [p.id, p.title]));
+  });
+
+  const monthlyStats = useLiveQuery(async () => {
+    const now = new Date();
+    const monthStart = startOfMonth(now).toISOString().split('T')[0];
+    const monthEnd = endOfMonth(now).toISOString().split('T')[0];
+
+    const reportIds = (
+      await db.dailyReports.where('date').between(monthStart, monthEnd, true, true).toArray()
+    ).map(r => r.id);
+
+    if (reportIds.length === 0) return { totalHours: 0, employees: [] };
+
+    const entries = await db.timeEntries.where('reportId').anyOf(reportIds).toArray();
+    const allEmployees = await db.employees.toArray();
+    const empMap = Object.fromEntries(allEmployees.map(e => [e.id, e]));
+
+    const byEmployee = new Map<string, { name: string; hours: number; rate: number }>();
+    for (const e of entries) {
+      const emp = empMap[e.employeeId];
+      if (!emp) continue;
+      const key = e.employeeId;
+      const existing = byEmployee.get(key) ?? { name: `${emp.firstName} ${emp.lastName}`, hours: 0, rate: emp.hourlyRate };
+      byEmployee.set(key, { ...existing, hours: existing.hours + e.totalHours });
+    }
+
+    const employees = [...byEmployee.values()].sort((a, b) => b.hours - a.hours).slice(0, 5);
+    const totalHours = entries.reduce((sum, e) => sum + e.totalHours, 0);
+    const estimatedRevenue = employees.reduce((sum, e) => sum + e.hours * e.rate, 0);
+
+    return { totalHours, employees, estimatedRevenue };
   });
 
   const activityFeed = useLiveQuery(async () => {
@@ -133,6 +164,47 @@ export default function Dashboard() {
           </Button>
         </div>
       </Card>
+
+      {/* Monthly Stats */}
+      {monthlyStats && (monthlyStats.totalHours > 0) && (
+        <Card padding="none">
+          <div className="px-4 py-3 flex items-center gap-2 border-b border-gray-100">
+            <BarChart2 size={14} className="text-primary-500" />
+            <h3 className="font-semibold text-gray-900 text-sm">Monatsauswertung</h3>
+            <span className="ml-auto text-xs text-gray-400">
+              {new Date().toLocaleString('de-CH', { month: 'long' })}
+            </span>
+          </div>
+          <div className="px-4 py-3 flex gap-4 border-b border-gray-100">
+            <div className="text-center">
+              <div className="text-xl font-bold text-primary-600">{formatHours(monthlyStats.totalHours)}</div>
+              <div className="text-xs text-gray-500">Total Stunden</div>
+            </div>
+            {(monthlyStats.estimatedRevenue ?? 0) > 0 && (
+              <div className="text-center">
+                <div className="text-xl font-bold text-green-600">{formatCurrency(monthlyStats.estimatedRevenue ?? 0)}</div>
+                <div className="text-xs text-gray-500">Geschätzter Umsatz</div>
+              </div>
+            )}
+          </div>
+          {monthlyStats.employees.map(emp => {
+            const pct = monthlyStats.totalHours > 0
+              ? Math.round((emp.hours / monthlyStats.totalHours) * 100)
+              : 0;
+            return (
+              <div key={emp.name} className="px-4 py-2.5 border-b border-gray-50 last:border-0">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-sm text-gray-700">{emp.name}</span>
+                  <span className="text-xs font-medium text-gray-500">{formatHours(emp.hours)}</span>
+                </div>
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary-400 rounded-full" style={{ width: `${pct}%` }} />
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
 
       {/* Activity Feed */}
       <Card padding="none">

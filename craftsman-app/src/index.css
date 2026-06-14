@@ -38,3 +38,13 @@ html {
 canvas {
   touch-action: none;
 }
+
+/* Print styles */
+@media print {
+  header, nav, .no-print { display: none !important; }
+  body { background: white !important; }
+  .max-w-2xl { max-width: 100% !important; margin: 0 !important; }
+  main { padding-bottom: 0 !important; overflow: visible !important; }
+  .bg-gray-50 { background: white !important; }
+  a[href]:after { content: none !important; }
+}

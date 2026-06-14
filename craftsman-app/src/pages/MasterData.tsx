@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil } from 'lucide-react';
+import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -13,6 +13,10 @@ import {
 import { UNITS, formatDate } from '../utils';
 import type { EmployeeRole } from '../types';
 import { loadConfig, saveConfig, clearConfig, getLastPull, syncNow, testConnection, SUPABASE_SQL } from '../sync/supabaseSync';
+import { getSupabaseClient } from '../sync/supabaseClient';
+import { exportBackup, importBackup } from '../utils/backup';
+import { requestNotificationPermission, disableNotifications, getNotificationsEnabled } from '../utils/notifications';
+import { useAuth } from '../hooks/useAuth';
 
 const ROLE_OPTIONS: { value: EmployeeRole; label: string }[] = [
   { value: 'admin', label: 'Admin' },
@@ -393,6 +397,7 @@ function MaterialsTab() {
 }
 
 function SyncTab() {
+  const { user, loading: authLoading, signIn, signUp, signOut } = useAuth();
   const [url, setUrl] = useState('');
   const [anonKey, setAnonKey] = useState('');
   const [configured, setConfigured] = useState(false);
@@ -403,6 +408,22 @@ function SyncTab() {
   const [lastPull, setLastPull] = useState<string | null>(null);
   const [result, setResult] = useState<{ pushed: number; pulled: number; errors: string[] } | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Auth form state
+  const [authMode, setAuthMode] = useState<'login' | 'register'>('login');
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPassword, setAuthPassword] = useState('');
+  const [authLoading2, setAuthLoading2] = useState(false);
+  const [authError, setAuthError] = useState('');
+  const [authSuccess, setAuthSuccess] = useState('');
+
+  // Backup state
+  const [exporting, setExporting] = useState(false);
+  const [importResult, setImportResult] = useState<{ imported: number; errors: string[] } | null>(null);
+
+  // Notifications
+  const [notifEnabled, setNotifEnabled] = useState(getNotificationsEnabled());
+  const notifSupported = 'Notification' in window;
 
   useEffect(() => {
     const cfg = loadConfig();
@@ -445,7 +466,7 @@ function SyncTab() {
     setResult(null);
     setProgress('');
     try {
-      const res = await syncNow(cfg, setProgress);
+      const res = await syncNow(cfg, setProgress, getSupabaseClient() ?? undefined);
       setResult(res);
       setLastPull(getLastPull());
     } catch (e) {
@@ -462,11 +483,95 @@ function SyncTab() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleAuthSubmit = async () => {
+    setAuthError(''); setAuthSuccess('');
+    if (!authEmail || !authPassword) { setAuthError('E-Mail und Passwort eingeben'); return; }
+    setAuthLoading2(true);
+    try {
+      if (authMode === 'login') {
+        await signIn(authEmail, authPassword);
+      } else {
+        await signUp(authEmail, authPassword);
+        setAuthSuccess('Registrierung erfolgreich – bitte E-Mail bestätigen.');
+      }
+    } catch (e) {
+      setAuthError(e instanceof Error ? e.message : 'Fehler');
+    } finally {
+      setAuthLoading2(false);
+    }
+  };
+
+  const handleExport = async () => {
+    setExporting(true);
+    try { await exportBackup(); } finally { setExporting(false); }
+  };
+
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    const res = await importBackup(file);
+    setImportResult(res);
+    setTimeout(() => setImportResult(null), 5000);
+  };
+
+  const handleToggleNotif = async () => {
+    if (notifEnabled) {
+      disableNotifications();
+      setNotifEnabled(false);
+    } else {
+      const granted = await requestNotificationPermission();
+      setNotifEnabled(granted);
+    }
+  };
+
   const canSave = url.trim() && anonKey.trim();
 
   return (
     <div className="space-y-4 mt-2">
-      {/* Connection setup */}
+
+      {/* ── Auth ─────────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700">Konto</h3>
+        {authLoading ? (
+          <p className="text-xs text-gray-400">Laden…</p>
+        ) : user ? (
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-900">{user.email}</div>
+              <div className="text-xs text-gray-500">Angemeldet</div>
+            </div>
+            <Button size="sm" variant="ghost" onClick={signOut}>
+              <LogOut size={14} /> Abmelden
+            </Button>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <p className="text-xs text-gray-500">
+              Mit einem Supabase-Konto anmelden für sicherere Synchronisierung.
+            </p>
+            <Input label="E-Mail" type="email" value={authEmail}
+              onChange={e => setAuthEmail(e.target.value)} placeholder="name@firma.ch" />
+            <Input label="Passwort" type="password" value={authPassword}
+              onChange={e => setAuthPassword(e.target.value)} placeholder="Mindestens 6 Zeichen" />
+            {authError && <div className="p-2 rounded-xl bg-red-50 text-red-700 text-xs">{authError}</div>}
+            {authSuccess && <div className="p-2 rounded-xl bg-green-50 text-green-700 text-xs">{authSuccess}</div>}
+            <div className="flex gap-2">
+              <Button onClick={handleAuthSubmit} loading={authLoading2} className="flex-1">
+                <LogIn size={14} /> {authMode === 'login' ? 'Anmelden' : 'Registrieren'}
+              </Button>
+            </div>
+            <button
+              onClick={() => { setAuthMode(m => m === 'login' ? 'register' : 'login'); setAuthError(''); setAuthSuccess(''); }}
+              className="w-full text-center text-xs text-primary-600 hover:text-primary-700"
+            >
+              {authMode === 'login' ? 'Noch kein Konto? Registrieren' : 'Bereits ein Konto? Anmelden'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Cloud-Sync ───────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm text-gray-700">Supabase Cloud-Sync</h3>
@@ -492,7 +597,6 @@ function SyncTab() {
           placeholder="eyJhbGciOiJIUzI1NiIsInR5…"
         />
 
-        {/* Connection status */}
         {connStatus && (
           <div className={`p-3 rounded-xl text-xs ${connStatus.ok ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
             {connStatus.ok
@@ -518,12 +622,12 @@ function SyncTab() {
         </div>
       </div>
 
-      {/* Sync controls (only shown when configured) */}
+      {/* ── Sync controls ───────────────────────────────────────────────── */}
       {configured && (
         <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
           <h3 className="font-semibold text-sm text-gray-700">Synchronisierung</h3>
           <p className="text-xs text-gray-500">
-            Sync läuft automatisch alle 5 Minuten wenn online. Manuell starten:
+            Sync läuft automatisch alle 5 Minuten wenn online.
           </p>
           <Button className="w-full" variant="outline" loading={syncing} onClick={handleSync}>
             <RefreshCw size={16} /> Jetzt synchronisieren
@@ -544,16 +648,67 @@ function SyncTab() {
                   {result.errors.map((e, i) => <div key={i} className="font-mono">{e}</div>)}
                 </div>
               ) : (
-                <div>
-                  ✓ Hochgeladen: {result.pushed} Einträge · Heruntergeladen: {result.pulled} neue
-                </div>
+                <div>✓ Hochgeladen: {result.pushed} · Heruntergeladen: {result.pulled} neu</div>
               )}
             </div>
           )}
         </div>
       )}
 
-      {/* SQL migration */}
+      {/* ── Backup ──────────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700">Lokales Backup</h3>
+        <p className="text-xs text-gray-500">
+          Alle Daten als JSON exportieren oder ein früheres Backup importieren.
+        </p>
+        <div className="flex gap-2">
+          <Button variant="outline" className="flex-1" loading={exporting} onClick={handleExport}>
+            <Download size={16} /> Exportieren
+          </Button>
+          <label className="flex-1">
+            <div className="flex items-center justify-center gap-2 h-10 px-4 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50 cursor-pointer transition-colors">
+              <FolderOpen size={16} /> Importieren
+            </div>
+            <input type="file" accept=".json,application/json" className="hidden" onChange={handleImport} />
+          </label>
+        </div>
+        {importResult && (
+          <div className={`p-3 rounded-xl text-xs ${importResult.errors.length > 0 ? 'bg-yellow-50 text-yellow-800' : 'bg-green-50 text-green-700'}`}>
+            {importResult.errors.length > 0 ? (
+              <div>
+                <div className="font-medium">{importResult.imported} Einträge importiert, {importResult.errors.length} Fehler:</div>
+                {importResult.errors.map((e, i) => <div key={i}>{e}</div>)}
+              </div>
+            ) : (
+              <div>✓ {importResult.imported} Einträge erfolgreich importiert</div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* ── Benachrichtigungen ──────────────────────────────────────────── */}
+      {notifSupported && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+          <h3 className="font-semibold text-sm text-gray-700">Benachrichtigungen</h3>
+          <p className="text-xs text-gray-500">
+            Push-Benachrichtigung wenn neue Daten synchronisiert werden.
+          </p>
+          <Button
+            variant={notifEnabled ? 'outline' : 'secondary'}
+            className="w-full"
+            onClick={handleToggleNotif}
+          >
+            {notifEnabled ? <><BellOff size={16} /> Deaktivieren</> : <><Bell size={16} /> Benachrichtigungen aktivieren</>}
+          </Button>
+          {Notification.permission === 'denied' && (
+            <p className="text-xs text-red-600">
+              Benachrichtigungen sind im Browser blockiert. Bitte in den Browsereinstellungen freigeben.
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* ── SQL migration ────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-sm text-gray-700">Schritt 1 – SQL Migration</h3>

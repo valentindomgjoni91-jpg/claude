@@ -171,8 +171,10 @@ export type SyncProgress = (msg: string) => void;
 export async function syncNow(
   config: SupabaseConfig,
   onProgress?: SyncProgress,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabaseClient?: SupabaseClient<any>,
 ): Promise<SyncResult> {
-  const client = createClient(config.url, config.anonKey);
+  const client: SupabaseClient = supabaseClient ?? createClient(config.url, config.anonKey);
   const since = getLastPull();
   const errors: string[] = [];
   let pushed = 0;

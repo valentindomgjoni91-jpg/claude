@@ -4,6 +4,8 @@ import { db } from '../db';
 import { useAppStore } from '../stores/useAppStore';
 import { getPendingCount, clearSynced } from './syncQueue';
 import { loadConfig, syncNow } from './supabaseSync';
+import { getSupabaseClient } from './supabaseClient';
+import { showNotification } from '../utils/notifications';
 
 const QUEUE_INTERVAL_MS = 30_000;
 const SUPABASE_INTERVAL_MS = 5 * 60_000; // 5 min
@@ -33,7 +35,10 @@ export function useSyncStatus() {
     const cfg = loadConfig();
     if (!cfg) return;
     try {
-      await syncNow(cfg);
+      const result = await syncNow(cfg, undefined, getSupabaseClient() ?? undefined);
+      if (result.pulled > 0) {
+        showNotification('Sync', `${result.pulled} neue Einträge synchronisiert`);
+      }
     } catch {
       // Silent background failure — errors surface on manual sync
     }
