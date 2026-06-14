@@ -105,27 +105,27 @@ export default function Dashboard() {
       <div className="grid grid-cols-2 gap-3">
         <Card className="text-center">
           <div className="text-2xl font-bold text-primary-600">{activeProjects ?? '—'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Aktive Projekte</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Aktive Projekte</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-green-600">
             {weekHours != null ? formatHours(weekHours) : '—'}
           </div>
-          <div className="text-xs text-gray-500 mt-0.5">Stunden diese Woche</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Stunden diese Woche</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-blue-600">{todayReports ?? '—'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Rapporte heute</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Rapporte heute</div>
         </Card>
         <Card className="text-center">
           <div className="text-2xl font-bold text-yellow-600">{draftCount ?? '—'}</div>
-          <div className="text-xs text-gray-500 mt-0.5">Entwürfe offen</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Entwürfe offen</div>
         </Card>
       </div>
 
       {/* Quick Actions */}
       <Card>
-        <h3 className="font-semibold text-gray-900 mb-3 text-sm">Schnellstart</h3>
+        <h3 className="font-semibold text-gray-900 dark:text-gray-100 mb-3 text-sm">Schnellstart</h3>
         <div className="grid grid-cols-2 gap-2">
           <Button
             onClick={() => navigate('/tagesrapport/new')}
@@ -168,22 +168,22 @@ export default function Dashboard() {
       {/* Monthly Stats */}
       {monthlyStats && (monthlyStats.totalHours > 0) && (
         <Card padding="none">
-          <div className="px-4 py-3 flex items-center gap-2 border-b border-gray-100">
+          <div className="px-4 py-3 flex items-center gap-2 border-b border-gray-100 dark:border-gray-700">
             <BarChart2 size={14} className="text-primary-500" />
-            <h3 className="font-semibold text-gray-900 text-sm">Monatsauswertung</h3>
-            <span className="ml-auto text-xs text-gray-400">
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Monatsauswertung</h3>
+            <span className="ml-auto text-xs text-gray-400 dark:text-gray-500">
               {new Date().toLocaleString('de-CH', { month: 'long' })}
             </span>
           </div>
-          <div className="px-4 py-3 flex gap-4 border-b border-gray-100">
+          <div className="px-4 py-3 flex gap-4 border-b border-gray-100 dark:border-gray-700">
             <div className="text-center">
               <div className="text-xl font-bold text-primary-600">{formatHours(monthlyStats.totalHours)}</div>
-              <div className="text-xs text-gray-500">Total Stunden</div>
+              <div className="text-xs text-gray-500 dark:text-gray-400">Total Stunden</div>
             </div>
             {(monthlyStats.estimatedRevenue ?? 0) > 0 && (
               <div className="text-center">
                 <div className="text-xl font-bold text-green-600">{formatCurrency(monthlyStats.estimatedRevenue ?? 0)}</div>
-                <div className="text-xs text-gray-500">Geschätzter Umsatz</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">Geschätzter Umsatz</div>
               </div>
             )}
           </div>
@@ -192,12 +192,12 @@ export default function Dashboard() {
               ? Math.round((emp.hours / monthlyStats.totalHours) * 100)
               : 0;
             return (
-              <div key={emp.name} className="px-4 py-2.5 border-b border-gray-50 last:border-0">
+              <div key={emp.name} className="px-4 py-2.5 border-b border-gray-50 dark:border-gray-700 last:border-0">
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-sm text-gray-700">{emp.name}</span>
-                  <span className="text-xs font-medium text-gray-500">{formatHours(emp.hours)}</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-200">{emp.name}</span>
+                  <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{formatHours(emp.hours)}</span>
                 </div>
-                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div className="h-1.5 bg-gray-100 dark:bg-gray-700 rounded-full overflow-hidden">
                   <div className="h-full bg-primary-400 rounded-full" style={{ width: `${pct}%` }} />
                 </div>
               </div>
@@ -208,14 +208,14 @@ export default function Dashboard() {
 
       {/* Activity Feed */}
       <Card padding="none">
-        <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100">
+        <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
           <div className="flex items-center gap-2">
             <TrendingUp size={14} className="text-primary-500" />
-            <h3 className="font-semibold text-gray-900 text-sm">Letzte Aktivität</h3>
+            <h3 className="font-semibold text-gray-900 dark:text-gray-100 text-sm">Letzte Aktivität</h3>
           </div>
           <button
             onClick={() => navigate('/archive')}
-            className="text-xs text-primary-600 font-medium"
+            className="text-xs text-primary-600 dark:text-primary-400 font-medium"
           >
             Alle anzeigen
           </button>
