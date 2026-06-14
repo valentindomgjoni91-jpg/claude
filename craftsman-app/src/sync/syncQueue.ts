@@ -22,13 +22,12 @@ export async function queueOperation(
 }
 
 export async function getPendingCount(): Promise<number> {
-  return db.syncQueue.where('synced').equals(0).count();
+  return db.syncQueue.filter(item => !item.synced).count();
 }
 
 export async function getPendingItems() {
   return db.syncQueue
-    .where('synced').equals(0)
-    .and(item => item.attempts < 5)
+    .filter(item => !item.synced && item.attempts < 5)
     .sortBy('createdAt');
 }
 
@@ -44,7 +43,7 @@ export async function incrementAttempts(id: string): Promise<void> {
 }
 
 export async function clearSynced(): Promise<void> {
-  await db.syncQueue.where('synced').equals(1).delete();
+  await db.syncQueue.filter(item => item.synced).delete();
 }
 
 /**

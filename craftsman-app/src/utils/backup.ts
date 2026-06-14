@@ -17,6 +17,7 @@ export async function exportBackup(): Promise<void> {
     employees: await db.employees.toArray(),
     machines: await db.machines.toArray(),
     materials: await db.materials.toArray(),
+    photos: await db.photos.toArray(),
     company: await db.company.toArray(),
   };
 
@@ -55,6 +56,7 @@ export async function importBackup(file: File): Promise<{ imported: number; erro
       { key: 'employees', rows: data.employees as unknown[] ?? [] },
       { key: 'machines', rows: data.machines as unknown[] ?? [] },
       { key: 'materials', rows: data.materials as unknown[] ?? [] },
+      { key: 'photos', rows: data.photos as unknown[] ?? [] },
       { key: 'company', rows: data.company as unknown[] ?? [] },
     ];
 

@@ -601,9 +601,11 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
         </div>
       )}
 
-      <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
-        <Plus size={16} /> Position hinzufügen
-      </Button>
+      {!adding && (
+        <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
+          <Plus size={16} /> Position hinzufügen
+        </Button>
+      )}
     </div>
   );
 }
