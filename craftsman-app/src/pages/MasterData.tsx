@@ -283,7 +283,7 @@ function MachinesTab() {
     <div className="space-y-3 mt-2">
       {machines?.map(m => (
         editingId === m.id ? (
-          <div key={m.id} className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+          <div key={m.id} className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
             <Input label="Bezeichnung" value={editForm.name} onChange={setEdit('name')} />
             <Input label="Typ" value={editForm.type} onChange={setEdit('type')} placeholder="z.B. Bagger, Fahrzeug" />
             <Input label="Kennzeichen" value={editForm.licensePlate} onChange={setEdit('licensePlate')} />
@@ -364,7 +364,7 @@ function MaterialsTab() {
     <div className="space-y-3 mt-2">
       {materials?.map(m => (
         editingId === m.id ? (
-          <div key={m.id} className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
+          <div key={m.id} className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
             <Input label="Bezeichnung" value={editForm.name} onChange={setEdit('name')} />
             <div className="grid grid-cols-2 gap-2">
               <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={editForm.unit} onChange={setEdit('unit')} />
