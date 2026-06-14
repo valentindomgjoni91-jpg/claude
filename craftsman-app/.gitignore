@@ -30,3 +30,6 @@ playwright-report/
 # Supabase credentials
 .env
 .env.local
+
+# Netlify CLI local state
+.netlify/
