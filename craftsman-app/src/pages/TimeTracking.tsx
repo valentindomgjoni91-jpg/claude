@@ -16,11 +16,13 @@ import { todayISO, formatHours, calcTotalHours, currentTime, formatDate, cn } fr
 import { v4 as uuidv4 } from 'uuid';
 import { generateTimesheetPdf } from '../pdf/timesheetPdf';
 import type { TimesheetEntry } from '../pdf/timesheetPdf';
+import { useLanguage } from '../i18n';
 
 const DAILY_TARGET_HOURS = 8.5;
 
 export default function TimeTracking() {
   const [activeTab, setActiveTab] = useState('timer');
+  const { t } = useLanguage();
   const tabs = [
     { id: 'timer', label: 'Stoppuhr', icon: <Clock size={14} /> },
     { id: 'week', label: 'Woche', icon: <BarChart2 size={14} /> },
@@ -30,7 +32,7 @@ export default function TimeTracking() {
 
   return (
     <div>
-      <PageHeader title="Zeiterfassung" />
+      <PageHeader title={t('page.time_tracking')} />
       <div className="px-4 py-3">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>

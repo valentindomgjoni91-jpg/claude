@@ -17,7 +17,7 @@ import {
   addRegiPosition, deleteRegiPosition,
 } from '../hooks/useRegiReports';
 import { useProjects } from '../hooks/useProjects';
-import { useCompany } from '../hooks/useMasterData';
+import { useCompany, useMaterials, useMachines } from '../hooks/useMasterData';
 import { todayISO, nowISO, formatCurrency, UNITS } from '../utils';
 import { usePhotos, addPhoto, deletePhoto } from '../hooks/useDailyReports';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
@@ -48,6 +48,8 @@ export default function RegiReportForm() {
   const positions = useRegiPositions(id);
   const projects = useProjects();
   useCompany(); // loaded for PDF generation
+  const materials = useMaterials();
+  const machines = useMachines();
 
   const [activeTab, setActiveTab] = useState('info');
   const [saving, setSaving] = useState(false);
@@ -288,6 +290,8 @@ export default function RegiReportForm() {
             reportId={reportId}
             positions={positions || []}
             onEnsureReport={ensureReport}
+            materials={materials || []}
+            machines={machines || []}
           />
         )}
 
@@ -471,7 +475,13 @@ export default function RegiReportForm() {
   );
 }
 
-function PositionsTab({ positions, onEnsureReport }: { reportId?: string; positions: any[]; onEnsureReport: () => Promise<string> }) {
+function PositionsTab({ positions, onEnsureReport, materials, machines }: {
+  reportId?: string;
+  positions: any[];
+  onEnsureReport: () => Promise<string>;
+  materials: any[];
+  machines: any[];
+}) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({
     type: 'labor',
@@ -482,6 +492,20 @@ function PositionsTab({ positions, onEnsureReport }: { reportId?: string; positi
   });
   const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [k]: e.target.value }));
+
+  const handleMaterialSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const mat = materials.find((m: any) => m.id === e.target.value);
+    if (mat) {
+      setForm(f => ({ ...f, description: mat.name, unit: mat.unit, unitPrice: mat.unitPrice.toString() }));
+    }
+  };
+
+  const handleMachineSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const machine = machines.find((m: any) => m.id === e.target.value);
+    if (machine) {
+      setForm(f => ({ ...f, description: machine.name, unitPrice: machine.hourlyRate.toString(), unit: 'h' }));
+    }
+  };
 
   const handleAdd = async () => {
     if (!form.description) return;
@@ -543,6 +567,24 @@ function PositionsTab({ positions, onEnsureReport }: { reportId?: string; positi
         <div className="bg-white rounded-2xl border-2 border-primary-200 p-4 space-y-3">
           <h4 className="font-semibold text-sm">Position hinzufügen</h4>
           <Select label="Typ" options={POSITION_TYPES} value={form.type} onChange={set('type')} />
+          {form.type === 'material' && materials.length > 0 && (
+            <Select
+              label="Aus Stammdaten"
+              options={materials.map((m: any) => ({ value: m.id, label: m.name }))}
+              placeholder="Wählen oder manuell..."
+              onChange={handleMaterialSelect}
+              value=""
+            />
+          )}
+          {form.type === 'machine' && machines.length > 0 && (
+            <Select
+              label="Aus Stammdaten"
+              options={machines.map((m: any) => ({ value: m.id, label: m.name }))}
+              placeholder="Wählen oder manuell..."
+              onChange={handleMachineSelect}
+              value=""
+            />
+          )}
           <Input label="Beschreibung *" value={form.description} onChange={set('description')} placeholder="z.B. Mauerwerk erstellen" />
           <div className="grid grid-cols-3 gap-2">
             <Input label="Menge" type="number" value={form.quantity} onChange={set('quantity')} />
