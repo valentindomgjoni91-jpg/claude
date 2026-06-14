@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { Play, Square, Plus, Trash2, Clock, BarChart2, ChevronLeft, ChevronRight, Briefcase } from 'lucide-react';
+import { Play, Square, Plus, Trash2, Clock, BarChart2, ChevronLeft, ChevronRight, Briefcase, Download, FileText } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
@@ -9,11 +9,13 @@ import Select from '../components/ui/Select';
 import Input from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
 import { Tabs } from '../components/ui/Tabs';
-import { useEmployees } from '../hooks/useMasterData';
+import { useEmployees, useCompany } from '../hooks/useMasterData';
 import { useProjects } from '../hooks/useProjects';
 import { db } from '../db';
 import { todayISO, formatHours, calcTotalHours, currentTime, formatDate, cn } from '../utils';
 import { v4 as uuidv4 } from 'uuid';
+import { generateTimesheetPdf } from '../pdf/timesheetPdf';
+import type { TimesheetEntry } from '../pdf/timesheetPdf';
 
 const DAILY_TARGET_HOURS = 8.5;
 
@@ -23,6 +25,7 @@ export default function TimeTracking() {
     { id: 'timer', label: 'Stoppuhr', icon: <Clock size={14} /> },
     { id: 'week', label: 'Woche', icon: <BarChart2 size={14} /> },
     { id: 'projects', label: 'Projekte', icon: <Briefcase size={14} /> },
+    { id: 'timesheet', label: 'Stundenzettel', icon: <FileText size={14} /> },
   ];
 
   return (
@@ -35,6 +38,7 @@ export default function TimeTracking() {
         {activeTab === 'timer' && <TimerTab />}
         {activeTab === 'week' && <WeekTab />}
         {activeTab === 'projects' && <ProjectsTab />}
+        {activeTab === 'timesheet' && <TimesheetTab />}
       </div>
     </div>
   );
@@ -517,6 +521,137 @@ function ProjectsTab() {
       {rows.length === 0 && totalHours === 0 && (
         <div className="text-center py-8 text-gray-400 text-sm">
           Noch keine Zeiteinträge in Rapporte erfasst.
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ---- Stundenzettel Tab ----
+
+function TimesheetTab() {
+  const employees = useEmployees();
+  const company = useCompany();
+  const [selectedEmp, setSelectedEmp] = useState('');
+  const [month, setMonth] = useState(() => new Date().toISOString().slice(0, 7));
+  const [generating, setGenerating] = useState(false);
+
+  const employeeOptions = (employees || []).map(e => ({
+    value: e.id,
+    label: `${e.firstName} ${e.lastName}`,
+  }));
+
+  const preview = useLiveQuery(async () => {
+    if (!selectedEmp || !month) return null;
+    const monthStart = startOfMonth(new Date(`${month}-01`)).toISOString().split('T')[0];
+    const monthEnd = endOfMonth(new Date(`${month}-01`)).toISOString().split('T')[0];
+
+    const allReports = await db.dailyReports.where('date').between(monthStart, monthEnd, true, true).toArray();
+    const reportIds = allReports.map(r => r.id);
+    if (reportIds.length === 0) return { entries: [], totalHours: 0 };
+
+    const timeEntries = await db.timeEntries
+      .where('reportId').anyOf(reportIds)
+      .filter(e => e.employeeId === selectedEmp)
+      .toArray();
+
+    const projects = await db.projects.toArray();
+    const projMap = Object.fromEntries(projects.map(p => [p.id, p]));
+    const reportMap = Object.fromEntries(allReports.map(r => [r.id, r]));
+
+    const entries: TimesheetEntry[] = timeEntries
+      .sort((a, b) => (reportMap[a.reportId]?.date ?? '').localeCompare(reportMap[b.reportId]?.date ?? ''))
+      .map(e => {
+        const report = reportMap[e.reportId];
+        const project = report ? projMap[report.projectId] : undefined;
+        return {
+          date: report?.date ?? e.date,
+          reportTitle: report?.title ?? '–',
+          projectTitle: project?.title ?? 'Ohne Projekt',
+          startTime: e.startTime,
+          endTime: e.endTime,
+          breakMinutes: e.breakMinutes,
+          totalHours: e.totalHours,
+          activity: e.activity,
+        };
+      });
+
+    return { entries, totalHours: entries.reduce((s, e) => s + e.totalHours, 0) };
+  }, [selectedEmp, month]);
+
+  const handleGenerate = async () => {
+    if (!selectedEmp || !month) return;
+    const employee = employees?.find(e => e.id === selectedEmp);
+    if (!employee || !preview) return;
+    setGenerating(true);
+    try {
+      const pdf = generateTimesheetPdf({
+        employee,
+        month,
+        entries: preview.entries,
+        company: company || null,
+      });
+      const [year, m] = month.split('-');
+      pdf.save(`Stundenzettel_${employee.lastName}_${year}-${m}.pdf`);
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 mt-2">
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700">Stundenzettel erstellen</h3>
+        <Select
+          label="Mitarbeiter"
+          options={employeeOptions}
+          value={selectedEmp}
+          onChange={e => setSelectedEmp(e.target.value)}
+          placeholder="Mitarbeiter wählen…"
+        />
+        <Input
+          label="Monat"
+          type="month"
+          value={month}
+          onChange={e => setMonth(e.target.value)}
+        />
+      </div>
+
+      {preview && selectedEmp && (
+        <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium text-gray-900">
+                {preview.entries.length} Einträge
+              </div>
+              <div className="text-xs text-gray-500">
+                Total: {formatHours(preview.totalHours)}
+              </div>
+            </div>
+            <Button onClick={handleGenerate} loading={generating} disabled={preview.entries.length === 0}>
+              <Download size={16} /> PDF erstellen
+            </Button>
+          </div>
+
+          {preview.entries.length > 0 && (
+            <div className="space-y-1 max-h-64 overflow-y-auto">
+              {preview.entries.map((e, i) => (
+                <div key={i} className="flex items-center justify-between py-1.5 border-b border-gray-50 last:border-0">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-medium text-gray-900">{formatDate(e.date)}</div>
+                    <div className="text-xs text-gray-400 truncate">{e.projectTitle}</div>
+                  </div>
+                  <div className="text-xs font-semibold text-gray-700 ml-2">{formatHours(e.totalHours)}</div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {preview.entries.length === 0 && (
+            <div className="text-center py-4 text-sm text-gray-400">
+              Keine Einträge für diesen Monat und Mitarbeiter.
+            </div>
+          )}
         </div>
       )}
     </div>

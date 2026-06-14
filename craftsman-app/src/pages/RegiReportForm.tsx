@@ -143,6 +143,7 @@ export default function RegiReportForm() {
         project: proj,
         positions: positions || [],
         company: company_ || null,
+        photos: photos || [],
       }),
       proj,
       company: company_ || null,

@@ -250,6 +250,45 @@ export function generateDailyReportPdf(data: DailyReportPdfData): jsPDF {
     y += imgHeight + 8;
   }
 
+  // Customer signature
+  if (y > 220) { doc.addPage(); y = margin; }
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(10);
+  doc.setTextColor(29, 78, 216);
+  doc.text('Bestätigung', margin, y);
+  y += 6;
+  doc.setTextColor(0, 0, 0);
+
+  if (report.customerSignature) {
+    try {
+      const sigWidth = 70;
+      const sigHeight = 25;
+      doc.addImage(report.customerSignature, 'PNG', margin, y, sigWidth, sigHeight);
+      doc.setDrawColor(180, 180, 180);
+      doc.line(margin, y + sigHeight + 1, margin + sigWidth, y + sigHeight + 1);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${report.customerName || 'Kunde'}, ${report.signedAt ? formatDate(report.signedAt) : ''}`, margin, y + sigHeight + 6);
+    } catch {
+      doc.setDrawColor(180, 180, 180);
+      doc.line(margin, y + 20, margin + 70, y + 20);
+      doc.setFontSize(7.5);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Unterschrift Kunde / Datum', margin, y + 25);
+    }
+  } else {
+    doc.setDrawColor(180, 180, 180);
+    doc.line(margin, y + 20, margin + 70, y + 20);
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Unterschrift Kunde / Datum', margin, y + 25);
+  }
+
+  // Company signature area
+  doc.line(110, y + 20, 110 + 70, y + 20);
+  doc.text(`${company?.name || 'Unternehmen'} / Datum`, 110, y + 25);
+  y += 35;
+
   // Footer
   const totalPages = doc.getNumberOfPages();
   for (let i = 1; i <= totalPages; i++) {

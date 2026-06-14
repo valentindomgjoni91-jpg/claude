@@ -1,17 +1,18 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { formatDate, formatCurrency } from '../utils';
-import type { RegiReport, RegiPosition, Project, Company } from '../types';
+import type { RegiReport, RegiPosition, Project, Company, Photo } from '../types';
 
 interface RegiReportPdfData {
   report: RegiReport;
   project: Project;
   positions: RegiPosition[];
   company: Company | null;
+  photos?: Photo[];
 }
 
 export function generateRegiReportPdf(data: RegiReportPdfData): jsPDF {
-  const { report, project, positions, company } = data;
+  const { report, project, positions, company, photos = [] } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -192,6 +193,34 @@ export function generateRegiReportPdf(data: RegiReportPdfData): jsPDF {
   doc.setDrawColor(220, 220, 220);
   doc.line(margin, y, pageWidth - margin, y);
   y += 8;
+
+  // Photos (up to 6)
+  const photosToShow = photos.slice(0, 6);
+  if (photosToShow.length > 0) {
+    if (y > 200) { doc.addPage(); y = margin; }
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(29, 78, 216);
+    doc.text('Fotos', margin, y);
+    y += 5;
+    const imgWidth = (pageWidth - margin * 2 - 5) / 2;
+    const imgHeight = imgWidth * 0.6;
+    photosToShow.forEach((photo, i) => {
+      if (i > 0 && i % 2 === 0) y += imgHeight + 5;
+      const x = i % 2 === 0 ? margin : margin + imgWidth + 5;
+      try {
+        doc.addImage(photo.dataUrl, 'JPEG', x, y, imgWidth, imgHeight);
+        if (photo.note) {
+          doc.setFontSize(7);
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(100, 100, 100);
+          doc.text(photo.note, x, y + imgHeight + 3, { maxWidth: imgWidth });
+        }
+      } catch { /* skip invalid */ }
+    });
+    y += imgHeight + 8;
+    doc.setTextColor(0, 0, 0);
+  }
 
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(10);
