@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText } from 'lucide-react';
+import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText, ClipboardList } from 'lucide-react';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -18,6 +18,8 @@ import {
 } from '../hooks/useRegiReports';
 import { useProjects } from '../hooks/useProjects';
 import { useCompany, useMaterials, useMachines } from '../hooks/useMasterData';
+import { useDailyReports } from '../hooks/useDailyReports';
+import { useLeistungEntries } from '../hooks/useLeistungEntries';
 import { todayISO, nowISO, formatCurrency, UNITS } from '../utils';
 import { usePhotos, addPhoto, deletePhoto } from '../hooks/useDailyReports';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
@@ -305,6 +307,7 @@ export default function RegiReportForm() {
             onEnsureReport={ensureReport}
             materials={materials || []}
             machines={machines || []}
+            projectId={form.projectId}
           />
         )}
 
@@ -488,14 +491,17 @@ export default function RegiReportForm() {
   );
 }
 
-function PositionsTab({ positions, onEnsureReport, materials, machines }: {
+function PositionsTab({ positions, onEnsureReport, materials, machines, projectId }: {
   reportId?: string;
   positions: RegiPosition[];
   onEnsureReport: () => Promise<string>;
   materials: Material[];
   machines: Machine[];
+  projectId: string;
 }) {
   const [adding, setAdding] = useState(false);
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const dailyReports = useDailyReports(projectId || undefined);
   const [form, setForm] = useState({
     type: 'labor',
     description: '',
@@ -615,11 +621,116 @@ function PositionsTab({ positions, onEnsureReport, materials, machines }: {
       )}
 
       {!adding && (
+        <Button variant="outline" className="w-full" onClick={() => setImportModalOpen(true)}>
+          <ClipboardList size={16} /> Tagesrapport übernehmen
+        </Button>
+      )}
+
+      {!adding && (
         <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
           <Plus size={16} /> Position hinzufügen
         </Button>
       )}
+
+      <Modal open={importModalOpen} onClose={() => setImportModalOpen(false)} title="Tagesrapport übernehmen">
+        <div className="space-y-3 max-h-96 overflow-y-auto">
+          {(!dailyReports || dailyReports.length === 0) ? (
+            <p className="text-sm text-gray-500 dark:text-gray-400 text-center py-4">Keine Tagesrapporte für dieses Projekt vorhanden.</p>
+          ) : (
+            dailyReports.map(dr => (
+              <DailyReportImportButton
+                key={dr.id}
+                dr={dr}
+                positions={positions}
+                onEnsureReport={onEnsureReport}
+                onClose={() => setImportModalOpen(false)}
+              />
+            ))
+          )}
+        </div>
+      </Modal>
     </div>
+  );
+}
+
+function DailyReportImportButton({ dr, positions, onEnsureReport, onClose }: {
+  dr: { id: string; title: string; date: string };
+  positions: RegiPosition[];
+  onEnsureReport: () => Promise<string>;
+  onClose: () => void;
+}) {
+  const leistungEntries = useLeistungEntries(dr.id);
+
+  return (
+    <button
+      onClick={async () => {
+        const rId = await onEnsureReport();
+        const [timeEntries, materialEntries, machineEntries, employees] = await Promise.all([
+          db.timeEntries.where('reportId').equals(dr.id).toArray(),
+          db.materialEntries.where('reportId').equals(dr.id).filter(e => e.reportType === 'daily').toArray(),
+          db.machineEntries.where('reportId').equals(dr.id).filter(e => e.reportType === 'daily').toArray(),
+          db.employees.toArray(),
+        ]);
+        const entries = leistungEntries || [];
+        const nextOrder = positions.length;
+        let i = 0;
+        for (const te of timeEntries) {
+          const emp = employees.find(e => e.id === te.employeeId);
+          const name = emp ? `${emp.firstName} ${emp.lastName}` : 'Mitarbeiter';
+          await addRegiPosition({
+            regiReportId: rId,
+            type: 'labor',
+            description: `${name} – Arbeit`,
+            quantity: te.totalHours,
+            unit: 'h',
+            unitPrice: emp?.hourlyRate ?? 75,
+            total: te.totalHours * (emp?.hourlyRate ?? 75),
+            sortOrder: nextOrder + i++,
+          });
+        }
+        for (const le of entries) {
+          await addRegiPosition({
+            regiReportId: rId,
+            type: 'labor',
+            description: le.leistungsart + (le.kommentar ? ` – ${le.kommentar}` : ''),
+            quantity: le.stunden,
+            unit: 'h',
+            unitPrice: 75,
+            total: le.stunden * 75,
+            sortOrder: nextOrder + i++,
+          });
+        }
+        for (const me of materialEntries) {
+          await addRegiPosition({
+            regiReportId: rId,
+            type: 'material',
+            description: me.description,
+            quantity: me.quantity,
+            unit: me.unit,
+            unitPrice: me.unitPrice,
+            total: me.total,
+            sortOrder: nextOrder + i++,
+          });
+        }
+        for (const mach of machineEntries) {
+          await addRegiPosition({
+            regiReportId: rId,
+            type: 'machine',
+            description: mach.description,
+            quantity: mach.hours,
+            unit: 'h',
+            unitPrice: mach.hourlyRate,
+            total: mach.total,
+            sortOrder: nextOrder + i++,
+          });
+        }
+        onClose();
+      }}
+      className="w-full text-left bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 hover:border-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors"
+    >
+      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">{dr.title}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400">{dr.date}</div>
+    </button>
   );
 }
 
