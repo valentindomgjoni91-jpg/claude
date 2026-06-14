@@ -44,6 +44,10 @@ export async function updateEmployee(id: string, data: Partial<Employee>): Promi
   await db.employees.update(id, data);
 }
 
+export async function deleteEmployee(id: string): Promise<void> {
+  await db.employees.delete(id);
+}
+
 export async function saveMachine(data: Omit<Machine, 'id'>): Promise<string> {
   const id = uuidv4();
   await db.machines.add({ ...data, id });
@@ -54,6 +58,10 @@ export async function updateMachine(id: string, data: Partial<Machine>): Promise
   await db.machines.update(id, data);
 }
 
+export async function deleteMachine(id: string): Promise<void> {
+  await db.machines.delete(id);
+}
+
 export async function saveMaterial(data: Omit<Material, 'id'>): Promise<string> {
   const id = uuidv4();
   await db.materials.add({ ...data, id });
@@ -62,6 +70,10 @@ export async function saveMaterial(data: Omit<Material, 'id'>): Promise<string> 
 
 export async function updateMaterial(id: string, data: Partial<Material>): Promise<void> {
   await db.materials.update(id, data);
+}
+
+export async function deleteMaterial(id: string): Promise<void> {
+  await db.materials.delete(id);
 }
 
 export async function saveCompany(data: Omit<Company, 'id'>): Promise<void> {

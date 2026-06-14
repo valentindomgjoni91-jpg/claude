@@ -9,9 +9,11 @@ import Select from '../components/ui/Select';
 import { Tabs } from '../components/ui/Tabs';
 import {
   useEmployees, useMachines, useMaterials, useCompany,
-  saveEmployee, updateEmployee, saveMachine, updateMachine,
-  saveMaterial, updateMaterial, saveCompany,
+  saveEmployee, updateEmployee, deleteEmployee,
+  saveMachine, updateMachine, deleteMachine,
+  saveMaterial, updateMaterial, deleteMaterial, saveCompany,
 } from '../hooks/useMasterData';
+import { SwipeToDelete } from '../components/ui/SwipeToDelete';
 import { UNITS, formatDate } from '../utils';
 import type { EmployeeRole } from '../types';
 import { loadConfig, saveConfig, clearConfig, getLastPull, syncNow, testConnection, SUPABASE_SQL } from '../sync/supabaseSync';
@@ -211,23 +213,25 @@ function EmployeesTab() {
             </div>
           </div>
         ) : (
-          <div key={emp.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
-            <div>
-              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{emp.firstName} {emp.lastName}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{ROLE_OPTIONS.find(r => r.value === emp.role)?.label} · CHF {emp.hourlyRate}/h</div>
+          <SwipeToDelete key={emp.id} onDelete={() => deleteEmployee(emp.id)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{emp.firstName} {emp.lastName}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{ROLE_OPTIONS.find(r => r.value === emp.role)?.label} · CHF {emp.hourlyRate}/h</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(emp)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => updateEmployee(emp.id, { active: !emp.active })}
+                  className={`text-xs px-2 py-1 rounded-full ${emp.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                >
+                  {emp.active ? 'Aktiv' : 'Inaktiv'}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => startEdit(emp)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => updateEmployee(emp.id, { active: !emp.active })}
-                className={`text-xs px-2 py-1 rounded-full ${emp.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
-              >
-                {emp.active ? 'Aktiv' : 'Inaktiv'}
-              </button>
-            </div>
-          </div>
+          </SwipeToDelete>
         )
       ))}
       {adding ? (
@@ -294,23 +298,25 @@ function MachinesTab() {
             </div>
           </div>
         ) : (
-          <div key={m.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
-            <div>
-              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.name}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{m.type}{m.licensePlate ? ` · ${m.licensePlate}` : ''} · CHF {m.hourlyRate}/h</div>
+          <SwipeToDelete key={m.id} onDelete={() => deleteMachine(m.id)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{m.type}{m.licensePlate ? ` · ${m.licensePlate}` : ''} · CHF {m.hourlyRate}/h</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => updateMachine(m.id, { active: !m.active })}
+                  className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                >
+                  {m.active ? 'Aktiv' : 'Inaktiv'}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => updateMachine(m.id, { active: !m.active })}
-                className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
-              >
-                {m.active ? 'Aktiv' : 'Inaktiv'}
-              </button>
-            </div>
-          </div>
+          </SwipeToDelete>
         )
       ))}
       {adding ? (
@@ -377,23 +383,25 @@ function MaterialsTab() {
             </div>
           </div>
         ) : (
-          <div key={m.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
-            <div>
-              <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.name}</div>
-              <div className="text-xs text-gray-500 dark:text-gray-400">{m.unit} · CHF {m.unitPrice}{m.category ? ` · ${m.category}` : ''}</div>
+          <SwipeToDelete key={m.id} onDelete={() => deleteMaterial(m.id)}>
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
+              <div>
+                <div className="font-medium text-sm text-gray-900 dark:text-gray-100">{m.name}</div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">{m.unit} · CHF {m.unitPrice}{m.category ? ` · ${m.category}` : ''}</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+                  <Pencil size={14} />
+                </button>
+                <button
+                  onClick={() => updateMaterial(m.id, { active: !m.active })}
+                  className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
+                >
+                  {m.active ? 'Aktiv' : 'Inaktiv'}
+                </button>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => startEdit(m)} className="p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
-                <Pencil size={14} />
-              </button>
-              <button
-                onClick={() => updateMaterial(m.id, { active: !m.active })}
-                className={`text-xs px-2 py-1 rounded-full ${m.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400'}`}
-              >
-                {m.active ? 'Aktiv' : 'Inaktiv'}
-              </button>
-            </div>
-          </div>
+          </SwipeToDelete>
         )
       ))}
       {adding ? (
