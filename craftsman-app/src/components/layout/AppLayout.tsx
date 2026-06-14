@@ -7,6 +7,7 @@ import { useSyncStatus } from '../../sync/useSyncStatus';
 import { useLanguage } from '../../i18n';
 import { useTheme } from '../../hooks/useTheme';
 import { useAdmin } from '../../context/AdminContext';
+import { db } from '../../db';
 
 export default function AppLayout() {
   const { isOnline, syncPending, setOnline } = useAppStore();
@@ -51,13 +52,18 @@ export default function AppLayout() {
     }
   };
 
-  const handleLockClick = () => {
+  const handleLockClick = async () => {
     if (isAdmin) {
       lock();
     } else {
-      setPinOpen(true);
-      setPin('');
-      setPinError(false);
+      const company = await db.company.toCollection().first();
+      if (!company?.adminPin) {
+        await unlock('');
+      } else {
+        setPinOpen(true);
+        setPin('');
+        setPinError(false);
+      }
     }
   };
 
