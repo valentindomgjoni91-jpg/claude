@@ -5,7 +5,6 @@ import {
   X, ArrowUpDown, Download, Copy,
 } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import PageHeader from '../components/layout/PageHeader';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
@@ -15,7 +14,6 @@ import { formatDate, formatHours, formatCurrency, cn } from '../utils';
 import { generateDailyReportPdf } from '../pdf/dailyReportPdf';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
 import { duplicateDailyReport, duplicateRegiReport } from '../hooks/useDuplicate';
-import { useLanguage } from '../i18n';
 
 type ReportType = 'all' | 'daily' | 'regi';
 type SortOrder = 'newest' | 'oldest';
@@ -40,7 +38,6 @@ interface PreviewData {
 
 export default function Archive() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
 
   // Filters
   const [search, setSearch] = useState('');
@@ -210,7 +207,6 @@ export default function Archive() {
 
   return (
     <div>
-      <PageHeader title={t('page.archive')} subtitle={`${unified.length} Rapport${unified.length !== 1 ? 'e' : ''}`} />
 
       <div className="px-4 py-3 space-y-3">
         {/* Search + Filter Toggle */}

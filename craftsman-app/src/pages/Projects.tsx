@@ -1,14 +1,13 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Plus, ChevronRight, FolderKanban, Search } from 'lucide-react';
-import PageHeader from '../components/layout/PageHeader';
+
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import { useProjects } from '../hooks/useProjects';
 import type { ProjectStatus } from '../types';
 import { cn } from '../utils';
-import { useLanguage } from '../i18n';
 
 const STATUS_TABS: { id: ProjectStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Alle' },
@@ -31,7 +30,6 @@ export default function Projects() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('active');
   const [search, setSearch] = useState('');
-  const { t } = useLanguage();
 
   const allProjects = useProjects();
 
@@ -46,27 +44,22 @@ export default function Projects() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('page.projects')}
-        action={
-          <Button onClick={() => navigate('/projects/new')} size="sm">
-            <Plus size={16} />
-            Neu
-          </Button>
-        }
-      />
-
       <div className="px-4 pt-3 space-y-3">
-        {/* Search */}
-        <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Projekt, Kunde oder Adresse suchen…"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-          />
+        {/* Search + Neu */}
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Suchen…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-600 text-sm bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+            />
+          </div>
+          <Button onClick={() => navigate('/projects/new')} size="sm">
+            <Plus size={16} /> Neu
+          </Button>
         </div>
 
         {/* Status filter */}

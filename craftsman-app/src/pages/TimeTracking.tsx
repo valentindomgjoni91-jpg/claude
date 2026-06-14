@@ -3,7 +3,7 @@ import { Play, Square, Plus, Trash2, Clock, BarChart2, ChevronLeft, ChevronRight
 import { useLiveQuery } from 'dexie-react-hooks';
 import { format, startOfWeek, endOfWeek, addWeeks, eachDayOfInterval, startOfMonth, endOfMonth } from 'date-fns';
 import { de } from 'date-fns/locale';
-import PageHeader from '../components/layout/PageHeader';
+
 import Button from '../components/ui/Button';
 import Select from '../components/ui/Select';
 import Input from '../components/ui/Input';
@@ -16,13 +16,11 @@ import { todayISO, formatHours, calcTotalHours, currentTime, formatDate, cn } fr
 import { v4 as uuidv4 } from 'uuid';
 import { generateTimesheetPdf } from '../pdf/timesheetPdf';
 import type { TimesheetEntry } from '../pdf/timesheetPdf';
-import { useLanguage } from '../i18n';
 
 const DAILY_TARGET_HOURS = 8.5;
 
 export default function TimeTracking() {
   const [activeTab, setActiveTab] = useState('timer');
-  const { t } = useLanguage();
   const tabs = [
     { id: 'timer', label: 'Stoppuhr', icon: <Clock size={14} /> },
     { id: 'week', label: 'Woche', icon: <BarChart2 size={14} /> },
@@ -32,8 +30,7 @@ export default function TimeTracking() {
 
   return (
     <div>
-      <PageHeader title={t('page.time_tracking')} />
-      <div className="px-4 py-3">
+      <div className="px-4 pt-3">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
       <div className="px-4 pb-8">

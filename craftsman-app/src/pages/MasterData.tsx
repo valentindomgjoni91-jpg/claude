@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
 import { useLanguage, LANGUAGE_NAMES, type Lang } from '../i18n';
 import { exportProjectsCSV, exportRegiReportsCSV, exportTimeEntriesCSV } from '../utils/csvExport';
-import PageHeader from '../components/layout/PageHeader';
+
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -41,8 +41,7 @@ export default function MasterData() {
 
   return (
     <div>
-      <PageHeader title={t('page.master_data')} />
-      <div className="px-4 py-3">
+      <div className="px-4 pt-3">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
       <div className="px-4 pb-8">
