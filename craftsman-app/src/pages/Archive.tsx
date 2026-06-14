@@ -252,14 +252,16 @@ export default function Archive() {
         </div>
 
         {/* Type Filter Pills */}
-        <div className="flex gap-2">
+        <div className="flex gap-1 bg-gray-100 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 p-1 rounded-xl">
           {(['all', 'daily', 'regi'] as ReportType[]).map(rType => (
             <button
               key={rType}
               onClick={() => setType(rType)}
               className={cn(
-                'px-3 py-1.5 rounded-full text-sm font-medium transition-colors flex-1',
-                type === rType ? 'bg-primary-600 text-white' : 'bg-gray-100 text-gray-600'
+                'px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex-1 whitespace-nowrap',
+                type === rType
+                  ? 'bg-white dark:bg-gray-800 text-primary-700 dark:text-primary-300 shadow-sm'
+                  : 'text-gray-600 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white'
               )}
             >
               {rType === 'all' ? 'Alle' : rType === 'daily' ? 'Tagesrapporte' : 'Regierapporte'}
