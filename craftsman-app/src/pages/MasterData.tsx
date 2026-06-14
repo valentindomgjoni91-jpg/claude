@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
+import { useLanguage, LANGUAGE_NAMES, type Lang } from '../i18n';
+import { exportProjectsCSV, exportRegiReportsCSV, exportTimeEntriesCSV } from '../utils/csvExport';
 import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
@@ -27,18 +29,19 @@ const ROLE_OPTIONS: { value: EmployeeRole; label: string }[] = [
 
 export default function MasterData() {
   const [activeTab, setActiveTab] = useState('company');
+  const { t } = useLanguage();
 
   const tabs = [
-    { id: 'company', label: 'Firma', icon: <Building2 size={14} /> },
-    { id: 'employees', label: 'Mitarbeiter', icon: <Users size={14} /> },
-    { id: 'machines', label: 'Maschinen', icon: <Truck size={14} /> },
-    { id: 'materials', label: 'Material', icon: <Package size={14} /> },
-    { id: 'sync', label: 'Sync', icon: <Cloud size={14} /> },
+    { id: 'company', label: t('tab.company'), icon: <Building2 size={14} /> },
+    { id: 'employees', label: t('tab.employees'), icon: <Users size={14} /> },
+    { id: 'machines', label: t('tab.machines'), icon: <Truck size={14} /> },
+    { id: 'materials', label: t('tab.materials'), icon: <Package size={14} /> },
+    { id: 'sync', label: t('tab.sync'), icon: <Cloud size={14} /> },
   ];
 
   return (
     <div>
-      <PageHeader title="Stammdaten" />
+      <PageHeader title={t('page.master_data')} />
       <div className="px-4 py-3">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
@@ -55,6 +58,7 @@ export default function MasterData() {
 
 function CompanyTab() {
   const company = useCompany();
+  const { lang, setLang } = useLanguage();
   const [form, setForm] = useState({
     name: '', street: '', city: '', zip: '', phone: '',
     email: '', website: '', vatNumber: '', footerText: '',
@@ -137,6 +141,24 @@ function CompanyTab() {
             <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleLogoUpload} />
           </label>
         )}
+      </div>
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700">Sprache / Langue / Lingua</h3>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.entries(LANGUAGE_NAMES) as [Lang, string][]).map(([code, name]) => (
+            <button
+              key={code}
+              onClick={() => setLang(code)}
+              className={`py-2 px-3 rounded-xl text-sm font-medium border-2 transition-colors ${
+                lang === code
+                  ? 'border-primary-500 bg-primary-50 text-primary-700'
+                  : 'border-gray-200 text-gray-600 hover:border-gray-300'
+              }`}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
       </div>
       <Button className="w-full" loading={saving} onClick={handleSave}>
         <Check size={16} /> Firmendaten speichern
@@ -686,6 +708,25 @@ function SyncTab() {
         )}
       </div>
 
+      {/* ── CSV Export ──────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700">Datenexport (CSV)</h3>
+        <p className="text-xs text-gray-500">
+          Daten als CSV-Datei für Excel / Buchhaltung exportieren.
+        </p>
+        <div className="space-y-2">
+          <Button variant="outline" className="w-full" onClick={() => exportProjectsCSV()}>
+            <Download size={16} /> Projekte exportieren
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => exportRegiReportsCSV()}>
+            <Download size={16} /> Regierapporte / Rechnungen
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => exportTimeEntriesCSV()}>
+            <Download size={16} /> Alle Stunden exportieren
+          </Button>
+        </div>
+      </div>
+
       {/* ── Benachrichtigungen ──────────────────────────────────────────── */}
       {notifSupported && (
         <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
@@ -707,6 +748,25 @@ function SyncTab() {
           )}
         </div>
       )}
+
+      {/* ── CSV Export ──────────────────────────────────────────────────── */}
+      <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700">Datenexport (CSV)</h3>
+        <p className="text-xs text-gray-500">
+          Daten als CSV-Datei für Excel / Buchhaltung exportieren.
+        </p>
+        <div className="space-y-2">
+          <Button variant="outline" className="w-full" onClick={() => exportProjectsCSV()}>
+            <Download size={16} /> Projekte exportieren
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => exportRegiReportsCSV()}>
+            <Download size={16} /> Regierapporte / Rechnungen
+          </Button>
+          <Button variant="outline" className="w-full" onClick={() => exportTimeEntriesCSV()}>
+            <Download size={16} /> Alle Stunden exportieren
+          </Button>
+        </div>
+      </div>
 
       {/* ── SQL migration ────────────────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-gray-100 p-4 space-y-3">

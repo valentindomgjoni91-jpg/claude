@@ -8,6 +8,7 @@ import EmptyState from '../components/ui/EmptyState';
 import { useProjects } from '../hooks/useProjects';
 import type { ProjectStatus } from '../types';
 import { cn } from '../utils';
+import { useLanguage } from '../i18n';
 
 const STATUS_TABS: { id: ProjectStatus | 'all'; label: string }[] = [
   { id: 'all', label: 'Alle' },
@@ -30,6 +31,7 @@ export default function Projects() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<ProjectStatus | 'all'>('active');
   const [search, setSearch] = useState('');
+  const { t } = useLanguage();
 
   const allProjects = useProjects();
 
@@ -45,7 +47,7 @@ export default function Projects() {
   return (
     <div className="flex flex-col">
       <PageHeader
-        title="Projekte"
+        title={t('page.projects')}
         action={
           <Button onClick={() => navigate('/projects/new')} size="sm">
             <Plus size={16} />

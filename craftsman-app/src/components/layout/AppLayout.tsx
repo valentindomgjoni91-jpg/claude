@@ -4,19 +4,21 @@ import { cn } from '../../utils';
 import { useAppStore } from '../../stores/useAppStore';
 import { useSyncStatus } from '../../sync/useSyncStatus';
 import { useEffect } from 'react';
-
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/projects', label: 'Projekte', icon: FolderKanban },
-  { to: '/timetracking', label: 'Zeiten', icon: Clock },
-  { to: '/archive', label: 'Archiv', icon: FileText },
-  { to: '/masterdata', label: 'Stammdaten', icon: Settings },
-];
+import { useLanguage } from '../../i18n';
 
 export default function AppLayout() {
   const location = useLocation();
   const { isOnline, syncPending, setOnline } = useAppStore();
+  const { t } = useLanguage();
   useSyncStatus();
+
+  const navItems = [
+    { to: '/', label: t('nav.dashboard'), icon: LayoutDashboard },
+    { to: '/projects', label: t('nav.projects'), icon: FolderKanban },
+    { to: '/timetracking', label: t('nav.time'), icon: Clock },
+    { to: '/archive', label: t('nav.archive'), icon: FileText },
+    { to: '/masterdata', label: t('nav.masterdata'), icon: Settings },
+  ];
 
   useEffect(() => {
     const onOnline = () => setOnline(true);
