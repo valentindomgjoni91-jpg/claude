@@ -559,7 +559,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
         try {
           const parsed: TimeSlot[] = JSON.parse(pos.timeSlots);
           timeLine = slotsLabel(parsed);
-        } catch {}
+        } catch { /* fällt auf Standard zurück */ }
       } else if (pos.startTime && pos.endTime) {
         timeLine = `${pos.startTime}–${pos.endTime}`;
       }

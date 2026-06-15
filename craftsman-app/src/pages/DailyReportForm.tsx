@@ -493,7 +493,7 @@ type TimeSlot = { start: string; end: string };
 
 function parseSlotsFromEntry(entry: TimeEntry): TimeSlot[] {
   if (entry.timeSlots) {
-    try { return JSON.parse(entry.timeSlots); } catch {}
+    try { return JSON.parse(entry.timeSlots); } catch { /* fällt auf Standard zurück */ }
   }
   if (entry.startTime && entry.endTime) return [{ start: entry.startTime, end: entry.endTime }];
   return [{ start: '07:00', end: '17:00' }];
