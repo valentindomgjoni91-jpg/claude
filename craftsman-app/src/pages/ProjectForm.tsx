@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, Archive } from 'lucide-react';
-import PageHeader from '../components/layout/PageHeader';
+import { Check, Archive, ArrowLeft } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -85,16 +84,20 @@ export default function ProjectForm() {
 
   return (
     <div>
-      <PageHeader
-        title={isEdit ? 'Projekt bearbeiten' : 'Projekt anlegen'}
-        backTo={isEdit && id ? `/projects/${id}` : '/projects'}
-        action={
-          <Button onClick={handleSubmit} loading={saving} size="sm">
-            <Check size={16} />
-            Speichern
-          </Button>
-        }
-      />
+      <div className="sticky top-[52px] z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-2">
+        <button
+          onClick={() => navigate(isEdit && id ? `/projects/${id}` : '/projects')}
+          className="p-1.5 -ml-1.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <span className="flex-1 text-sm font-semibold text-gray-900 dark:text-gray-100">
+          {isEdit ? 'Projekt bearbeiten' : 'Projekt anlegen'}
+        </span>
+        <Button onClick={handleSubmit} loading={saving} size="sm">
+          <Check size={16} /> Speichern
+        </Button>
+      </div>
 
       <div className="px-4 py-4 space-y-4">
         <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-4">

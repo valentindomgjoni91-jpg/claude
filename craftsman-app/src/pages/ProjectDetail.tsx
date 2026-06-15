@@ -1,7 +1,6 @@
 import { useNavigate, useParams } from 'react-router-dom';
-import { Edit2, Plus, Calendar, FileText, ChevronRight, MapPin, User, Phone, Clock, TrendingUp, Download } from 'lucide-react';
+import { Edit2, Plus, Calendar, FileText, ChevronRight, MapPin, User, Phone, Clock, TrendingUp, Download, ArrowLeft } from 'lucide-react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import PageHeader from '../components/layout/PageHeader';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
@@ -109,16 +108,21 @@ export default function ProjectDetail() {
 
   return (
     <div>
-      <PageHeader
-        title={project.title}
-        subtitle={project.clientName}
-        backTo="/projects"
-        action={
-          <Button variant="ghost" size="sm" onClick={() => navigate(`/projects/${id}/edit`)}>
-            <Edit2 size={16} />
-          </Button>
-        }
-      />
+      <div className="sticky top-[52px] z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-2">
+        <button
+          onClick={() => navigate('/projects')}
+          className="p-1.5 -ml-1.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+        >
+          <ArrowLeft size={18} />
+        </button>
+        <div className="flex-1 min-w-0">
+          <div className="text-sm font-semibold text-gray-900 dark:text-gray-100 truncate">{project.title}</div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 truncate">{project.clientName}</div>
+        </div>
+        <Button variant="ghost" size="sm" onClick={() => navigate(`/projects/${id}/edit`)}>
+          <Edit2 size={16} />
+        </Button>
+      </div>
 
       <div className="px-4 py-4 space-y-4">
         {/* Project Info */}

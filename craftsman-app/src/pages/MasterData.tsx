@@ -41,6 +41,8 @@ export default function MasterData() {
     if (!isAdmin) navigate('/', { replace: true });
   }, [isAdmin, navigate]);
 
+  if (!isAdmin) return null;
+
   const tabs = [
     { id: 'company', label: t('tab.company'), icon: <Building2 size={14} /> },
     { id: 'employees', label: t('tab.employees'), icon: <Users size={14} /> },
@@ -51,7 +53,7 @@ export default function MasterData() {
 
   return (
     <div>
-      <div className="px-4 pt-3">
+      <div className="sticky top-[52px] z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 pt-3 pb-2">
         <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
       </div>
       <div className="px-4 pb-8">

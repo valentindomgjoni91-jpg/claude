@@ -339,7 +339,7 @@ export default function DailyReportForm() {
               <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Kundenbestätigung</h3>
               {report?.customerSignature ? (
                 <div className="space-y-3">
-                  <div className="bg-gray-50 rounded-xl p-3">
+                  <div className="bg-gray-50 dark:bg-gray-700 rounded-xl p-3">
                     <img src={report.customerSignature} alt="Unterschrift" className="max-h-24 w-auto" />
                   </div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -526,9 +526,9 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours, reportD
   return (
     <div className="space-y-3">
       {totalHours > 0 && (
-        <div className="bg-primary-50 rounded-xl px-4 py-2 flex items-center justify-between">
-          <span className="text-sm text-primary-700 font-medium">Total Arbeitsstunden</span>
-          <span className="font-bold text-primary-800">{formatHours(totalHours)}</span>
+        <div className="bg-primary-50 dark:bg-primary-900/20 rounded-xl px-4 py-2 flex items-center justify-between">
+          <span className="text-sm text-primary-700 dark:text-primary-300 font-medium">Total Arbeitsstunden</span>
+          <span className="font-bold text-primary-800 dark:text-primary-200">{formatHours(totalHours)}</span>
         </div>
       )}
 
@@ -674,9 +674,9 @@ function MaterialTab({ entries, materialOptions, materials, onEnsureReport, tota
   return (
     <div className="space-y-3">
       {totalCost > 0 && (
-        <div className="bg-green-50 rounded-xl px-4 py-2 flex justify-between items-center">
-          <span className="text-sm text-green-700 font-medium">Total Material</span>
-          <span className="font-bold text-green-800">{formatCurrency(totalCost)}</span>
+        <div className="bg-green-50 dark:bg-green-900/20 rounded-xl px-4 py-2 flex justify-between items-center">
+          <span className="text-sm text-green-700 dark:text-green-300 font-medium">Total Material</span>
+          <span className="font-bold text-green-800 dark:text-green-200">{formatCurrency(totalCost)}</span>
         </div>
       )}
       {entries.map((entry) => (
@@ -773,9 +773,9 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
   return (
     <div className="space-y-3">
       {totalCost > 0 && (
-        <div className="bg-yellow-50 rounded-xl px-4 py-2 flex justify-between items-center">
-          <span className="text-sm text-yellow-700 font-medium">Total Maschinen</span>
-          <span className="font-bold text-yellow-800">{formatCurrency(totalCost)}</span>
+        <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-xl px-4 py-2 flex justify-between items-center">
+          <span className="text-sm text-yellow-700 dark:text-yellow-300 font-medium">Total Maschinen</span>
+          <span className="font-bold text-yellow-800 dark:text-yellow-200">{formatCurrency(totalCost)}</span>
         </div>
       )}
       {entries.map((entry) => {
@@ -860,14 +860,14 @@ function SubcontractorTab({ entries, onEnsureReport, totalCost }: {
   return (
     <div className="space-y-3">
       {/* Info banner */}
-      <div className="bg-blue-50 rounded-xl px-4 py-2.5 text-xs text-blue-700">
+      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl px-4 py-2.5 text-xs text-blue-700 dark:text-blue-300">
         Fremdleistungen sind Leistungen, die durch Drittfirmen erbracht wurden (Subunternehmer, Spezialisten, Transporte).
       </div>
 
       {totalCost > 0 && (
-        <div className="bg-purple-50 rounded-xl px-4 py-2 flex justify-between items-center">
-          <span className="text-sm text-purple-700 font-medium">Total Fremdleistungen</span>
-          <span className="font-bold text-purple-800">{formatCurrency(totalCost)}</span>
+        <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl px-4 py-2 flex justify-between items-center">
+          <span className="text-sm text-purple-700 dark:text-purple-300 font-medium">Total Fremdleistungen</span>
+          <span className="font-bold text-purple-800 dark:text-purple-200">{formatCurrency(totalCost)}</span>
         </div>
       )}
 
