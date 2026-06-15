@@ -4,6 +4,12 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      keyframes: {
+        'slide-up': { from: { transform: 'translateY(20px)', opacity: '0' }, to: { transform: 'translateY(0)', opacity: '1' } },
+      },
+      animation: {
+        'slide-up': 'slide-up 0.25s ease-out',
+      },
       colors: {
         primary: {
           50: '#eff6ff',

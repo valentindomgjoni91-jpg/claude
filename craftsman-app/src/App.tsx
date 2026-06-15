@@ -14,6 +14,7 @@ import { seedDefaultData, cleanupDemoData } from './db';
 import { LanguageProvider } from './i18n';
 import { ThemeProvider } from './hooks/useTheme';
 import { AdminProvider } from './context/AdminContext';
+import PWAUpdatePrompt from './components/PWAUpdatePrompt';
 
 export default function App() {
   useEffect(() => {
@@ -44,6 +45,7 @@ export default function App() {
           </Route>
         </Routes>
       </BrowserRouter>
+      <PWAUpdatePrompt />
     </AdminProvider>
     </LanguageProvider>
     </ThemeProvider>
