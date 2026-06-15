@@ -7,6 +7,9 @@ import EmptyState from '../components/ui/EmptyState';
 import { useProject } from '../hooks/useProjects';
 import { useCompany } from '../hooks/useMasterData';
 import { db } from '../db';
+import { SwipeToDelete } from '../components/ui/SwipeToDelete';
+import { deleteDailyReport } from '../hooks/useDailyReports';
+import { deleteRegiReport } from '../hooks/useRegiReports';
 import { formatDate, formatHours, formatCurrency } from '../utils';
 import { generateProjectReportPdf } from '../pdf/projectReportPdf';
 import type { ProjectStatus } from '../types';
@@ -258,79 +261,77 @@ export default function ProjectDetail() {
         )}
 
         {/* Daily Reports */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+        <div className="space-y-2">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
             <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
               Tagesrapporte ({dailyReports?.length ?? 0})
             </h3>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => navigate(`/tagesrapport/new?projectId=${id}`)}
-            >
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/tagesrapport/new?projectId=${id}`)}>
               <Plus size={14} /> Neu
             </Button>
           </div>
           {dailyReports?.length === 0 && (
-            <EmptyState title="Keine Tagesrapporte" description="Noch keine Tagesrapporte für dieses Projekt." />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <EmptyState title="Keine Tagesrapporte" description="Noch keine Tagesrapporte für dieses Projekt." />
+            </div>
           )}
           {dailyReports?.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => navigate(`/tagesrapport/${r.id}`)}
-              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
-            >
-              <Calendar size={16} className="text-primary-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(r.date)}</div>
-              </div>
-              <div className="flex items-center gap-1">
-                {r.status === 'completed'
-                  ? <Badge variant="success">Fertig</Badge>
-                  : <Badge variant="warning">Entwurf</Badge>
-                }
-                <ChevronRight size={14} className="text-gray-400" />
-              </div>
-            </button>
+            <SwipeToDelete key={r.id} onDelete={() => deleteDailyReport(r.id)}>
+              <button
+                onClick={() => navigate(`/tagesrapport/${r.id}`)}
+                className="w-full px-4 py-3 flex items-center gap-3 text-left"
+              >
+                <Calendar size={16} className="text-primary-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(r.date)}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  {r.status === 'completed'
+                    ? <Badge variant="success">Fertig</Badge>
+                    : <Badge variant="warning">Entwurf</Badge>
+                  }
+                  <ChevronRight size={14} className="text-gray-400" />
+                </div>
+              </button>
+            </SwipeToDelete>
           ))}
         </div>
 
         {/* Regi Reports */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="px-4 py-3 flex items-center justify-between border-b border-gray-100 dark:border-gray-700">
+        <div className="space-y-2">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 px-4 py-3 flex items-center justify-between">
             <h3 className="font-semibold text-sm text-gray-900 dark:text-gray-100">
               Regierapporte ({regiReports?.length ?? 0})
             </h3>
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => navigate(`/regierapport/new?projectId=${id}`)}
-            >
+            <Button size="sm" variant="ghost" onClick={() => navigate(`/regierapport/new?projectId=${id}`)}>
               <Plus size={14} /> Neu
             </Button>
           </div>
           {regiReports?.length === 0 && (
-            <EmptyState title="Keine Regierapporte" />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
+              <EmptyState title="Keine Regierapporte" />
+            </div>
           )}
           {regiReports?.map((r) => (
-            <button
-              key={r.id}
-              onClick={() => navigate(`/regierapport/${r.id}`)}
-              className="w-full px-4 py-3 flex items-center gap-3 border-b border-gray-50 dark:border-gray-700 last:border-0 hover:bg-gray-50 dark:hover:bg-gray-700 text-left"
-            >
-              <FileText size={16} className="text-orange-500 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
-                <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(r.date)}</div>
-              </div>
-              <div className="flex items-center gap-1">
-                <Badge variant={r.status === 'signed' ? 'success' : r.status === 'invoiced' ? 'info' : 'warning'}>
-                  {r.status === 'signed' ? 'Signiert' : r.status === 'invoiced' ? 'Verrechnet' : 'Entwurf'}
-                </Badge>
-                <ChevronRight size={14} className="text-gray-400" />
-              </div>
-            </button>
+            <SwipeToDelete key={r.id} onDelete={() => deleteRegiReport(r.id)}>
+              <button
+                onClick={() => navigate(`/regierapport/${r.id}`)}
+                className="w-full px-4 py-3 flex items-center gap-3 text-left"
+              >
+                <FileText size={16} className="text-orange-500 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{r.title}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{formatDate(r.date)}</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Badge variant={r.status === 'signed' ? 'success' : r.status === 'invoiced' ? 'info' : 'warning'}>
+                    {r.status === 'signed' ? 'Signiert' : r.status === 'invoiced' ? 'Verrechnet' : 'Entwurf'}
+                  </Badge>
+                  <ChevronRight size={14} className="text-gray-400" />
+                </div>
+              </button>
+            </SwipeToDelete>
           ))}
         </div>
 

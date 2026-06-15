@@ -14,6 +14,9 @@ import { formatDate, formatHours, formatCurrency, cn } from '../utils';
 import { generateDailyReportPdf } from '../pdf/dailyReportPdf';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
 import { duplicateDailyReport, duplicateRegiReport } from '../hooks/useDuplicate';
+import { SwipeToDelete } from '../components/ui/SwipeToDelete';
+import { deleteDailyReport } from '../hooks/useDailyReports';
+import { deleteRegiReport } from '../hooks/useRegiReports';
 
 type ReportType = 'all' | 'daily' | 'regi';
 type SortOrder = 'newest' | 'oldest';
@@ -313,12 +316,16 @@ export default function Archive() {
         {/* Report List */}
         <div className="space-y-2 pb-4">
           {unified.map(r => (
-            <ReportCard
+            <SwipeToDelete
               key={`${r.type}-${r.id}`}
-              report={r}
-              projectName={projectMap[r.projectId]?.title}
-              onPreview={() => openPreview(r)}
-            />
+              onDelete={() => r.type === 'daily' ? deleteDailyReport(r.id) : deleteRegiReport(r.id)}
+            >
+              <ReportCard
+                report={r}
+                projectName={projectMap[r.projectId]?.title}
+                onPreview={() => openPreview(r)}
+              />
+            </SwipeToDelete>
           ))}
           {unified.length === 0 && (
             <div className="text-center py-14 text-gray-400">
@@ -371,7 +378,7 @@ function ReportCard({ report, projectName, onPreview }: {
   const { variant, label } = statusMap[report.status] ?? { variant: 'gray', label: report.status };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden active:scale-[0.98] transition-transform">
+    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700">
       <button
         onClick={onPreview}
         className="w-full px-4 py-3.5 flex items-start gap-3 text-left"

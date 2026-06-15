@@ -59,3 +59,11 @@ export async function updateRegiPosition(id: string, data: Partial<RegiPosition>
 export async function deleteRegiPosition(id: string): Promise<void> {
   await db.regiPositions.delete(id);
 }
+
+export async function deleteRegiReport(id: string): Promise<void> {
+  await Promise.all([
+    db.regiPositions.where('regiReportId').equals(id).delete(),
+    db.photos.where('reportId').equals(id).delete(),
+  ]);
+  await db.regiReports.delete(id);
+}

@@ -62,6 +62,22 @@ export async function createDailyReport(data: Omit<DailyReport, 'id' | 'createdA
   return id;
 }
 
+export async function deleteDailyReport(id: string): Promise<void> {
+  await db.transaction('rw', [
+    db.dailyReports, db.timeEntries, db.materialEntries,
+    db.machineEntries, db.subcontractorEntries, db.photos,
+  ], async () => {
+    await Promise.all([
+      db.timeEntries.where('reportId').equals(id).delete(),
+      db.materialEntries.where('reportId').equals(id).delete(),
+      db.machineEntries.where('reportId').equals(id).delete(),
+      db.subcontractorEntries.where('reportId').equals(id).delete(),
+      db.photos.where('reportId').equals(id).delete(),
+    ]);
+    await db.dailyReports.delete(id);
+  });
+}
+
 export async function updateDailyReport(id: string, data: Partial<DailyReport>): Promise<void> {
   await db.dailyReports.update(id, { ...data, updatedAt: nowISO() });
 }
