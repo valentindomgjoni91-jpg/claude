@@ -22,7 +22,21 @@ export interface InvoicePdfData {
   invoiceNumber?: string;
 }
 
-export function generateInvoicePdf(data: InvoicePdfData): { pdf: jsPDF; invoiceNumber: string } {
+async function fitImageSize(dataUrl: string, maxW: number, maxH: number): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      resolve({ w, h });
+    };
+    img.onerror = () => resolve({ w: maxW, h: maxH });
+    img.src = dataUrl;
+  });
+}
+
+export async function generateInvoicePdf(data: InvoicePdfData): Promise<{ pdf: jsPDF; invoiceNumber: string }> {
   const { report, positions, project, company } = data;
   const invoiceNumber = data.invoiceNumber ?? nextInvoiceNumber();
 
@@ -39,8 +53,9 @@ export function generateInvoicePdf(data: InvoicePdfData): { pdf: jsPDF; invoiceN
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(company.logoUrl, fmt, margin, y, 30, 20);
-      y += 24;
+      const { w, h } = await fitImageSize(company.logoUrl, 40, 22);
+      doc.addImage(company.logoUrl, fmt, margin, y, w, h);
+      y += h + 4;
     } catch { y += 4; }
   }
 

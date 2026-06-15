@@ -220,7 +220,7 @@ export default function RegiReportForm() {
       db.company.toCollection().first(),
     ]);
     if (!proj) return;
-    const { pdf, invoiceNumber } = generateInvoicePdf({
+    const { pdf, invoiceNumber } = await generateInvoicePdf({
       report,
       positions: positions || [],
       project: proj,

@@ -73,7 +73,7 @@ function CompanyTab() {
   const [form, setForm] = useState({
     name: '', street: '', city: '', zip: '', phone: '',
     email: '', website: '', vatNumber: '', footerText: '',
-    logoUrl: '', bankAccount: '', adminPin: '',
+    logoUrl: '', companySignature: '', bankAccount: '', adminPin: '',
   });
   const [saving, setSaving] = useState(false);
 
@@ -91,6 +91,7 @@ function CompanyTab() {
         vatNumber: company.vatNumber || '',
         footerText: company.footerText || '',
         logoUrl: company.logoUrl || '',
+        companySignature: company.companySignature || '',
         bankAccount: company.bankAccount || '',
         adminPin: company.adminPin || '',
       });
@@ -105,6 +106,14 @@ function CompanyTab() {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (ev) => setForm(f => ({ ...f, logoUrl: ev.target?.result as string }));
+    reader.readAsDataURL(file);
+  };
+
+  const handleSignatureUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => setForm(f => ({ ...f, companySignature: ev.target?.result as string }));
     reader.readAsDataURL(file);
   };
 
@@ -152,6 +161,22 @@ function CompanyTab() {
             <Upload size={16} />
             <span>Logo hochladen (PNG / JPG)</span>
             <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleLogoUpload} />
+          </label>
+        )}
+      </div>
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
+        <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Firmenstempel / Unterschrift (PDF)</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">Wird im PDF unten rechts bei der Kundenbestätigung eingeblendet.</p>
+        {form.companySignature ? (
+          <div className="flex items-center gap-3">
+            <img src={form.companySignature} alt="Firmenstempel" className="h-14 object-contain border border-gray-200 rounded-lg p-1 bg-white" />
+            <button type="button" onClick={() => setForm(f => ({ ...f, companySignature: '' }))} className="text-xs text-red-600 hover:text-red-700 font-medium">Entfernen</button>
+          </div>
+        ) : (
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-primary-600 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+            <Upload size={16} />
+            <span>Stempel / Unterschrift hochladen (PNG / JPG)</span>
+            <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleSignatureUpload} />
           </label>
         )}
       </div>

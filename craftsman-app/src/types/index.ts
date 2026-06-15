@@ -171,6 +171,7 @@ export interface Company {
   website?: string;
   vatNumber?: string;
   logoUrl?: string;
+  companySignature?: string;
   bankAccount?: string;
   footerText?: string;
   adminPin?: string;

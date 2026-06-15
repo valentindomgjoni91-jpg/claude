@@ -12,6 +12,20 @@ interface RegiReportPdfData {
   photos?: Photo[];
 }
 
+async function fitImageSize(dataUrl: string, maxW: number, maxH: number): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      resolve({ w, h });
+    };
+    img.onerror = () => resolve({ w: maxW, h: maxH });
+    img.src = dataUrl;
+  });
+}
+
 export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<jsPDF> {
   const { report, project, positions, company, photos = [] } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -29,7 +43,8 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(company.logoUrl, fmt, margin, 5, 30, 22);
+      const { w, h } = await fitImageSize(company.logoUrl, 40, 22);
+      doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
     } catch { /* skip invalid logo */ }
   }
 
@@ -145,17 +160,17 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   y += 6;
 
   const netTotal = Object.values(totals).reduce((a, b) => a + b, 0);
-  const vatRate = report.vatRate || 8.1;
+  const vatRate = report.vatRate ?? 8.1;
   const vatAmount = netTotal * (vatRate / 100);
   const grossTotal = netTotal + vatAmount;
 
-  const summaryRows = [
+  const summaryRows: [string, string][] = [
     ['Subtotal Arbeit', formatCurrency(totals.labor)],
     ['Subtotal Material', formatCurrency(totals.material)],
     ['Subtotal Maschinen', formatCurrency(totals.machine)],
     ['Subtotal Zusatzkosten', formatCurrency(totals.extra)],
     ['Nettototal', formatCurrency(netTotal)],
-    [`MWST ${vatRate}%`, formatCurrency(vatAmount)],
+    ...(vatRate > 0 ? [[`MWST ${vatRate}%`, formatCurrency(vatAmount)] as [string, string]] : []),
     ['GESAMTTOTAL', formatCurrency(grossTotal)],
   ];
 
@@ -267,8 +282,25 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   }
 
   // Company signature area
-  doc.line(110, y + 20, 110 + 70, y + 20);
-  doc.text(`${company?.name || 'Unternehmen'} / Datum`, 110, y + 25);
+  if (company?.companySignature) {
+    try {
+      const sigFmt = company.companySignature.startsWith('data:image/png') ? 'PNG' : 'JPEG';
+      const { w: sw, h: sh } = await fitImageSize(company.companySignature, 70, 20);
+      doc.addImage(company.companySignature, sigFmt, 110, y, sw, sh);
+      doc.setDrawColor(180, 180, 180);
+      doc.line(110, y + sh + 1, 110 + 70, y + sh + 1);
+      doc.setFontSize(7.5);
+      doc.text(`${company.name || 'Unternehmen'} / Datum`, 110, y + sh + 6);
+    } catch {
+      doc.line(110, y + 20, 110 + 70, y + 20);
+      doc.setFontSize(7.5);
+      doc.text(`${company?.name || 'Unternehmen'} / Datum`, 110, y + 25);
+    }
+  } else {
+    doc.line(110, y + 20, 110 + 70, y + 20);
+    doc.setFontSize(7.5);
+    doc.text(`${company?.name || 'Unternehmen'} / Datum`, 110, y + 25);
+  }
   y += 35;
 
   // Footer
