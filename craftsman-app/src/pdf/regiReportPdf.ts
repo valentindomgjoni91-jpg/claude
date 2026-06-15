@@ -283,6 +283,7 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   }
 
   // Company signature area
+  const companyLabel = `${company?.name || 'Unternehmen'}, ${formatDate(new Date())}`;
   if (company?.companySignature) {
     try {
       const sigFmt = company.companySignature.startsWith('data:image/png') ? 'PNG' : 'JPEG';
@@ -291,16 +292,16 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
       doc.setDrawColor(180, 180, 180);
       doc.line(110, y + sh + 1, 110 + 70, y + sh + 1);
       doc.setFontSize(7.5);
-      doc.text(`${company.name || 'Unternehmen'} / Datum`, 110, y + sh + 6);
+      doc.text(companyLabel, 110, y + sh + 6);
     } catch {
       doc.line(110, y + 20, 110 + 70, y + 20);
       doc.setFontSize(7.5);
-      doc.text(`${company?.name || 'Unternehmen'} / Datum`, 110, y + 25);
+      doc.text(companyLabel, 110, y + 25);
     }
   } else {
     doc.line(110, y + 20, 110 + 70, y + 20);
     doc.setFontSize(7.5);
-    doc.text(`${company?.name || 'Unternehmen'} / Datum`, 110, y + 25);
+    doc.text(companyLabel, 110, y + 25);
   }
   y += 35;
 
