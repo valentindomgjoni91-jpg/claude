@@ -20,7 +20,7 @@ import { useProjects } from '../hooks/useProjects';
 import { useCompany, useMaterials, useMachines } from '../hooks/useMasterData';
 import { useDailyReports } from '../hooks/useDailyReports';
 import { useLeistungEntries } from '../hooks/useLeistungEntries';
-import { todayISO, nowISO, formatCurrency, UNITS } from '../utils';
+import { todayISO, nowISO, formatCurrency, UNITS, calcTotalHours, formatHours } from '../utils';
 import { usePhotos, addPhoto, deletePhoto } from '../hooks/useDailyReports';
 import { generateRegiReportPdf } from '../pdf/regiReportPdf';
 import { generateInvoicePdf } from '../pdf/invoicePdf';
@@ -513,7 +513,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
   const [importModalOpen, setImportModalOpen] = useState(false);
   const dailyReports = useDailyReports(projectId || undefined);
 
-  const [laborForm, setLaborForm] = useState({ description: '', hours: '1', unitPrice: '75' });
+  const [laborForm, setLaborForm] = useState({ description: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', unitPrice: '75' });
   const [matForm, setMatForm] = useState({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0' });
   const [machForm, setMachForm] = useState({ machineId: '', description: '', hours: '1', unitPrice: '0' });
 
@@ -522,7 +522,14 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
   const machItems = positions.filter(p => p.type === 'machine');
   const extraItems = positions.filter(p => p.type === 'extra');
 
-  const addPosition = async (type: RegiPosition['type'], description: string, quantity: number, unit: string, unitPrice: number) => {
+  const addPosition = async (
+    type: RegiPosition['type'],
+    description: string,
+    quantity: number,
+    unit: string,
+    unitPrice: number,
+    extra?: { startTime?: string; endTime?: string; breakMinutes?: number },
+  ) => {
     if (!description) return;
     const rId = await onEnsureReport();
     await addRegiPosition({
@@ -534,29 +541,39 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
       unitPrice,
       total: quantity * unitPrice,
       sortOrder: positions.length,
+      ...extra,
     });
     setAddingType(null);
   };
 
-  const renderPositionRow = (pos: RegiPosition, i: number) => (
-    <div key={pos.id} className="px-4 py-3 flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-400 font-mono w-4">{i + 1}.</span>
-          <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
+  const renderPositionRow = (pos: RegiPosition, i: number) => {
+    const isLabor = pos.type === 'labor';
+    const timeLabel = isLabor && pos.startTime && pos.endTime
+      ? `${pos.startTime} – ${pos.endTime}${pos.breakMinutes ? ` · Pause: ${pos.breakMinutes} min` : ''}`
+      : null;
+    return (
+      <div key={pos.id} className="px-4 py-3 flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-400 font-mono w-4">{i + 1}.</span>
+            <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+            {timeLabel
+              ? <>{timeLabel} · <strong>{formatHours(pos.quantity)}</strong>{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}/h` : ''}</>
+              : <>{pos.quantity} {pos.unit}{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}` : ''}</>
+            }
+          </div>
         </div>
-        <div className="text-xs text-gray-500 dark:text-gray-400 ml-6">
-          {pos.quantity} {pos.unit}{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}` : ''}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {isAdmin && <span className="font-bold text-sm text-gray-700 dark:text-gray-200">{formatCurrency(pos.total)}</span>}
+          <button onClick={() => deleteRegiPosition(pos.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
+            <Trash2 size={14} />
+          </button>
         </div>
       </div>
-      <div className="flex items-center gap-2 flex-shrink-0">
-        {isAdmin && <span className="font-bold text-sm text-gray-700 dark:text-gray-200">{formatCurrency(pos.total)}</span>}
-        <button onClick={() => deleteRegiPosition(pos.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
-          <Trash2 size={14} />
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const sectionHeader = (label: string, total: number) => (
     <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
@@ -581,34 +598,43 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
               onChange={e => setLaborForm(f => ({ ...f, description: e.target.value }))}
               placeholder="z.B. Bodenbeläge verlegen"
             />
-            <div className={`grid gap-2 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
-              <Input
-                label="Stunden"
-                type="number"
-                value={laborForm.hours}
-                onChange={e => setLaborForm(f => ({ ...f, hours: e.target.value }))}
-                min="0.5"
-                step="0.5"
-              />
-              {isAdmin && (
-                <Input
-                  label="Satz (CHF/h)"
-                  type="number"
-                  value={laborForm.unitPrice}
-                  onChange={e => setLaborForm(f => ({ ...f, unitPrice: e.target.value }))}
-                />
-              )}
+            <div className="grid grid-cols-3 gap-2">
+              <Input label="Von" type="time" value={laborForm.startTime} onChange={e => setLaborForm(f => ({ ...f, startTime: e.target.value }))} />
+              <Input label="Bis" type="time" value={laborForm.endTime} onChange={e => setLaborForm(f => ({ ...f, endTime: e.target.value }))} />
+              <Input label="Pause (min)" type="number" value={laborForm.breakMinutes} onChange={e => setLaborForm(f => ({ ...f, breakMinutes: e.target.value }))} />
+            </div>
+            <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2 flex justify-between">
+              <span>Total Stunden</span>
+              <strong>{formatHours(calcTotalHours(laborForm.startTime, laborForm.endTime, Number(laborForm.breakMinutes)))}</strong>
             </div>
             {isAdmin && (
-              <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
-                Total: <strong>{formatCurrency(Number(laborForm.hours) * Number(laborForm.unitPrice))}</strong>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
+                  <Input
+                    label="Satz (CHF/h)"
+                    type="number"
+                    value={laborForm.unitPrice}
+                    onChange={e => setLaborForm(f => ({ ...f, unitPrice: e.target.value }))}
+                  />
+                </div>
+                <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2 mb-[1px] whitespace-nowrap">
+                  = <strong>{formatCurrency(calcTotalHours(laborForm.startTime, laborForm.endTime, Number(laborForm.breakMinutes)) * Number(laborForm.unitPrice))}</strong>
+                </div>
               </div>
             )}
             <div className="flex gap-2">
-              <Button size="sm" className="flex-1" onClick={() => addPosition('labor', laborForm.description, Number(laborForm.hours), 'h', Number(laborForm.unitPrice))}>
+              <Button size="sm" className="flex-1" onClick={() => {
+                const hrs = calcTotalHours(laborForm.startTime, laborForm.endTime, Number(laborForm.breakMinutes));
+                addPosition('labor', laborForm.description, hrs, 'h', Number(laborForm.unitPrice), {
+                  startTime: laborForm.startTime,
+                  endTime: laborForm.endTime,
+                  breakMinutes: Number(laborForm.breakMinutes),
+                });
+                setLaborForm({ description: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', unitPrice: '75' });
+              }}>
                 <Check size={14} /> Hinzufügen
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setLaborForm({ description: '', hours: '1', unitPrice: '75' }); }}>
+              <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setLaborForm({ description: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', unitPrice: '75' }); }}>
                 Abbrechen
               </Button>
             </div>

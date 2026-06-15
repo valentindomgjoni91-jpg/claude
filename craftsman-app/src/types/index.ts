@@ -124,6 +124,9 @@ export interface RegiPosition {
   unitPrice: number;
   total: number;
   sortOrder: number;
+  startTime?: string;
+  endTime?: string;
+  breakMinutes?: number;
 }
 
 export interface Employee {
