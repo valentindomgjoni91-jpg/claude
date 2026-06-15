@@ -19,14 +19,14 @@ export default function PageHeader({ title, subtitle, backTo, action, className 
   // If no back button and no subtitle: compact action-only bar (title hidden)
   if (!hasBack && !hasSubtitle && action) {
     return (
-      <div className={cn('bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-end sticky top-[52px] z-20', className)}>
+      <div className={cn('bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center justify-end sticky top-0 z-20', className)}>
         <div className="flex items-center gap-2">{action}</div>
       </div>
     );
   }
 
   return (
-    <div className={cn('bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-2 sticky top-[52px] z-20', className)}>
+    <div className={cn('bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-2 sticky top-0 z-20', className)}>
       {backTo && (
         <button
           onClick={() => navigate(backTo)}

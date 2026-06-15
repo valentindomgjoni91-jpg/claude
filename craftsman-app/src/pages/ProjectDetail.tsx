@@ -108,7 +108,7 @@ export default function ProjectDetail() {
 
   return (
     <div>
-      <div className="sticky top-[52px] z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-2">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 px-4 py-2 flex items-center gap-2">
         <button
           onClick={() => navigate('/projects')}
           className="p-1.5 -ml-1.5 rounded-xl text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"

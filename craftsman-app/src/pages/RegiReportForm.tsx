@@ -258,7 +258,7 @@ export default function RegiReportForm() {
 
   return (
     <div>
-      <div className="sticky top-[52px] z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
+      <div className="sticky top-0 z-20 bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700">
         <div className="px-4 py-2 flex items-center gap-2">
           <button
             onClick={() => navigate(form.projectId ? `/projects/${form.projectId}` : '/')}
