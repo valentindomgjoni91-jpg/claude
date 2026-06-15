@@ -50,6 +50,7 @@ export interface TimeEntry {
   totalHours: number;
   activity?: string;
   note?: string;
+  timeSlots?: string;
 }
 
 export interface MaterialEntry {
@@ -127,6 +128,7 @@ export interface RegiPosition {
   startTime?: string;
   endTime?: string;
   breakMinutes?: number;
+  timeSlots?: string;
 }
 
 export interface Employee {

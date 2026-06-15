@@ -513,7 +513,12 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
   const [importModalOpen, setImportModalOpen] = useState(false);
   const dailyReports = useDailyReports(projectId || undefined);
 
-  const [laborForm, setLaborForm] = useState({ description: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', unitPrice: '75' });
+  type TimeSlot = { start: string; end: string };
+  const calcSlotsHours = (s: TimeSlot[]) => s.reduce((sum, sl) => sum + calcTotalHours(sl.start, sl.end, 0), 0);
+  const slotsLabel = (s: TimeSlot[]) => s.map(sl => `${sl.start}–${sl.end}`).join(' / ');
+
+  const [laborSlots, setLaborSlots] = useState<TimeSlot[]>([{ start: '07:00', end: '17:00' }]);
+  const [laborForm, setLaborForm] = useState({ description: '', unitPrice: '75' });
   const [matForm, setMatForm] = useState({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0' });
   const [machForm, setMachForm] = useState({ machineId: '', description: '', hours: '1', unitPrice: '0' });
 
@@ -528,7 +533,7 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
     quantity: number,
     unit: string,
     unitPrice: number,
-    extra?: { startTime?: string; endTime?: string; breakMinutes?: number },
+    extra?: { startTime?: string; endTime?: string; breakMinutes?: number; timeSlots?: string },
   ) => {
     if (!description) return;
     const rId = await onEnsureReport();
@@ -548,9 +553,17 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
 
   const renderPositionRow = (pos: RegiPosition, i: number) => {
     const isLabor = pos.type === 'labor';
-    const timeLabel = isLabor && pos.startTime && pos.endTime
-      ? `${pos.startTime} – ${pos.endTime}${pos.breakMinutes ? ` · Pause: ${pos.breakMinutes} min` : ''}`
-      : null;
+    let timeLine: string | null = null;
+    if (isLabor) {
+      if (pos.timeSlots) {
+        try {
+          const parsed: TimeSlot[] = JSON.parse(pos.timeSlots);
+          timeLine = slotsLabel(parsed);
+        } catch {}
+      } else if (pos.startTime && pos.endTime) {
+        timeLine = `${pos.startTime}–${pos.endTime}`;
+      }
+    }
     return (
       <div key={pos.id} className="px-4 py-3 flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
         <div className="flex-1 min-w-0">
@@ -559,8 +572,8 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
             <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
           </div>
           <div className="text-xs text-gray-500 dark:text-gray-400 ml-6">
-            {timeLabel
-              ? <>{timeLabel} · <strong>{formatHours(pos.quantity)}</strong>{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}/h` : ''}</>
+            {timeLine
+              ? <>{timeLine} · <strong>{formatHours(pos.quantity)}</strong>{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}/h` : ''}</>
               : <>{pos.quantity} {pos.unit}{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}` : ''}</>
             }
           </div>
@@ -598,43 +611,57 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
               onChange={e => setLaborForm(f => ({ ...f, description: e.target.value }))}
               placeholder="z.B. Bodenbeläge verlegen"
             />
-            <div className="grid grid-cols-3 gap-2">
-              <Input label="Von" type="time" value={laborForm.startTime} onChange={e => setLaborForm(f => ({ ...f, startTime: e.target.value }))} />
-              <Input label="Bis" type="time" value={laborForm.endTime} onChange={e => setLaborForm(f => ({ ...f, endTime: e.target.value }))} />
-              <Input label="Pause (min)" type="number" value={laborForm.breakMinutes} onChange={e => setLaborForm(f => ({ ...f, breakMinutes: e.target.value }))} />
+            <div className="space-y-2">
+              {laborSlots.map((slot, i) => (
+                <div key={i} className="flex gap-2 items-end">
+                  <div className="flex-1">
+                    <Input label={i === 0 ? 'Von' : ''} type="time" value={slot.start} onChange={e => setLaborSlots(s => s.map((sl, idx) => idx === i ? { ...sl, start: e.target.value } : sl))} />
+                  </div>
+                  <div className="flex-1">
+                    <Input label={i === 0 ? 'Bis' : ''} type="time" value={slot.end} onChange={e => setLaborSlots(s => s.map((sl, idx) => idx === i ? { ...sl, end: e.target.value } : sl))} />
+                  </div>
+                  {laborSlots.length > 1 && (
+                    <button onClick={() => setLaborSlots(s => s.filter((_, idx) => idx !== i))} className="p-2 mb-[1px] rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
+                      <X size={14} />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={() => setLaborSlots(s => [...s, { start: s[s.length - 1].end, end: s[s.length - 1].end }])}
+                className="flex items-center gap-1 text-sm text-primary-600 dark:text-primary-400 font-medium"
+              >
+                <Plus size={13} /> Zeitraum hinzufügen
+              </button>
             </div>
             <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2 flex justify-between">
               <span>Total Stunden</span>
-              <strong>{formatHours(calcTotalHours(laborForm.startTime, laborForm.endTime, Number(laborForm.breakMinutes)))}</strong>
+              <strong>{formatHours(calcSlotsHours(laborSlots))}</strong>
             </div>
             {isAdmin && (
               <div className="flex items-end gap-2">
                 <div className="flex-1">
-                  <Input
-                    label="Satz (CHF/h)"
-                    type="number"
-                    value={laborForm.unitPrice}
-                    onChange={e => setLaborForm(f => ({ ...f, unitPrice: e.target.value }))}
-                  />
+                  <Input label="Satz (CHF/h)" type="number" value={laborForm.unitPrice} onChange={e => setLaborForm(f => ({ ...f, unitPrice: e.target.value }))} />
                 </div>
                 <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2 mb-[1px] whitespace-nowrap">
-                  = <strong>{formatCurrency(calcTotalHours(laborForm.startTime, laborForm.endTime, Number(laborForm.breakMinutes)) * Number(laborForm.unitPrice))}</strong>
+                  = <strong>{formatCurrency(calcSlotsHours(laborSlots) * Number(laborForm.unitPrice))}</strong>
                 </div>
               </div>
             )}
             <div className="flex gap-2">
               <Button size="sm" className="flex-1" onClick={() => {
-                const hrs = calcTotalHours(laborForm.startTime, laborForm.endTime, Number(laborForm.breakMinutes));
+                const hrs = calcSlotsHours(laborSlots);
                 addPosition('labor', laborForm.description, hrs, 'h', Number(laborForm.unitPrice), {
-                  startTime: laborForm.startTime,
-                  endTime: laborForm.endTime,
-                  breakMinutes: Number(laborForm.breakMinutes),
+                  startTime: laborSlots[0].start,
+                  endTime: laborSlots[laborSlots.length - 1].end,
+                  timeSlots: JSON.stringify(laborSlots),
                 });
-                setLaborForm({ description: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', unitPrice: '75' });
+                setLaborForm({ description: '', unitPrice: '75' });
+                setLaborSlots([{ start: '07:00', end: '17:00' }]);
               }}>
                 <Check size={14} /> Hinzufügen
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setLaborForm({ description: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', unitPrice: '75' }); }}>
+              <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setLaborForm({ description: '', unitPrice: '75' }); setLaborSlots([{ start: '07:00', end: '17:00' }]); }}>
                 Abbrechen
               </Button>
             </div>

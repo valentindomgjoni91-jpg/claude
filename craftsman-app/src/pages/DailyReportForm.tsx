@@ -489,16 +489,58 @@ interface TimeTabProps {
   reportDate: string;
 }
 
+type TimeSlot = { start: string; end: string };
+
+function parseSlotsFromEntry(entry: TimeEntry): TimeSlot[] {
+  if (entry.timeSlots) {
+    try { return JSON.parse(entry.timeSlots); } catch {}
+  }
+  if (entry.startTime && entry.endTime) return [{ start: entry.startTime, end: entry.endTime }];
+  return [{ start: '07:00', end: '17:00' }];
+}
+
+function calcSlotsHours(slots: TimeSlot[]): number {
+  return slots.reduce((sum, s) => sum + calcTotalHours(s.start, s.end, 0), 0);
+}
+
+function slotsLabel(slots: TimeSlot[]): string {
+  return slots.map(s => `${s.start}–${s.end}`).join(' / ');
+}
+
+function SlotsInput({ slots, onChange }: { slots: TimeSlot[]; onChange: (slots: TimeSlot[]) => void }) {
+  const update = (i: number, key: 'start' | 'end', val: string) =>
+    onChange(slots.map((s, idx) => idx === i ? { ...s, [key]: val } : s));
+  const addSlot = () => onChange([...slots, { start: slots[slots.length - 1].end, end: slots[slots.length - 1].end }]);
+  const removeSlot = (i: number) => onChange(slots.filter((_, idx) => idx !== i));
+
+  return (
+    <div className="space-y-2">
+      {slots.map((slot, i) => (
+        <div key={i} className="flex gap-2 items-end">
+          <div className="flex-1">
+            <Input label={i === 0 ? 'Von' : ''} type="time" value={slot.start} onChange={e => update(i, 'start', e.target.value)} />
+          </div>
+          <div className="flex-1">
+            <Input label={i === 0 ? 'Bis' : ''} type="time" value={slot.end} onChange={e => update(i, 'end', e.target.value)} />
+          </div>
+          {slots.length > 1 && (
+            <button onClick={() => removeSlot(i)} className="p-2 mb-[1px] rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      ))}
+      <button onClick={addSlot} className="flex items-center gap-1 text-sm text-primary-600 dark:text-primary-400 font-medium">
+        <Plus size={13} /> Zeitraum hinzufügen
+      </button>
+    </div>
+  );
+}
+
 function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours, reportDate }: TimeTabProps) {
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({
-    employeeId: '',
-    startTime: '07:00',
-    endTime: '17:00',
-    breakMinutes: '30',
-    activity: '',
-    note: '',
-  });
+  const [slots, setSlots] = useState<TimeSlot[]>([{ start: '07:00', end: '17:00' }]);
+  const [form, setForm] = useState({ employeeId: '', activity: '', note: '' });
 
   const set = (key: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm(f => ({ ...f, [key]: e.target.value }));
@@ -506,21 +548,23 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours, reportD
   const handleAdd = async () => {
     if (!form.employeeId) return;
     const rId = await onEnsureReport();
-    const totalHrs = calcTotalHours(form.startTime, form.endTime, Number(form.breakMinutes));
+    const totalHrs = calcSlotsHours(slots);
     await addTimeEntry({
       reportId: rId,
       reportType: 'daily',
       employeeId: form.employeeId,
       date: reportDate,
-      startTime: form.startTime,
-      endTime: form.endTime,
-      breakMinutes: Number(form.breakMinutes),
+      startTime: slots[0].start,
+      endTime: slots[slots.length - 1].end,
+      breakMinutes: 0,
       totalHours: totalHrs,
+      timeSlots: JSON.stringify(slots),
       activity: form.activity || undefined,
       note: form.note || undefined,
     });
     setAdding(false);
-    setForm({ employeeId: '', startTime: '07:00', endTime: '17:00', breakMinutes: '30', activity: '', note: '' });
+    setSlots([{ start: '07:00', end: '17:00' }]);
+    setForm({ employeeId: '', activity: '', note: '' });
   };
 
   return (
@@ -540,21 +584,16 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours, reportD
         <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
           <h4 className="font-semibold text-sm text-gray-900 dark:text-gray-100">Neuer Zeiteintrag</h4>
           <Select label="Mitarbeiter" value={form.employeeId} onChange={set('employeeId')} options={employeeOptions} placeholder="Mitarbeiter wählen" />
-          <div className="grid grid-cols-3 gap-2">
-            <Input label="Von" type="time" value={form.startTime} onChange={set('startTime')} />
-            <Input label="Bis" type="time" value={form.endTime} onChange={set('endTime')} />
-            <Input label="Pause (min)" type="number" value={form.breakMinutes} onChange={set('breakMinutes')} />
+          <SlotsInput slots={slots} onChange={setSlots} />
+          <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2 flex justify-between">
+            <span>Total Stunden</span>
+            <strong>{formatHours(calcSlotsHours(slots))}</strong>
           </div>
-          {form.startTime && form.endTime && (
-            <div className="text-sm text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
-              Total: <strong>{formatHours(calcTotalHours(form.startTime, form.endTime, Number(form.breakMinutes)))}</strong>
-            </div>
-          )}
           <Input label="Tätigkeit" value={form.activity} onChange={set('activity')} placeholder="z.B. Mauerwerk, Schalung…" />
           <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Interne Bemerkung" />
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Speichern</Button>
-            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
+            <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setSlots([{ start: '07:00', end: '17:00' }]); }}>Abbrechen</Button>
           </div>
         </div>
       )}
@@ -574,35 +613,38 @@ function TimeTab({ entries, employeeOptions, onEnsureReport, totalHours, reportD
 
 function TimeEntryCard({ entry, employeeOptions }: { entry: TimeEntry; employeeOptions: { value: string; label: string }[] }) {
   const [editing, setEditing] = useState(false);
-  const [form, setForm] = useState({
-    startTime: entry.startTime || '',
-    endTime: entry.endTime || '',
-    breakMinutes: entry.breakMinutes?.toString() || '0',
-    activity: entry.activity || '',
-    note: entry.note || '',
-  });
+  const [slots, setSlots] = useState<TimeSlot[]>(() => parseSlotsFromEntry(entry));
+  const [activity, setActivity] = useState(entry.activity || '');
+  const [note, setNote] = useState(entry.note || '');
 
   const employeeName = employeeOptions.find(e => e.value === entry.employeeId)?.label || entry.employeeId;
+  const displaySlots = parseSlotsFromEntry(entry);
 
   const handleSave = async () => {
-    const totalHours = calcTotalHours(form.startTime, form.endTime, Number(form.breakMinutes));
-    await updateTimeEntry(entry.id, { ...form, breakMinutes: Number(form.breakMinutes), totalHours });
+    const totalHours = calcSlotsHours(slots);
+    await updateTimeEntry(entry.id, {
+      startTime: slots[0].start,
+      endTime: slots[slots.length - 1].end,
+      breakMinutes: 0,
+      totalHours,
+      timeSlots: JSON.stringify(slots),
+      activity: activity || undefined,
+      note: note || undefined,
+    });
     setEditing(false);
   };
 
   return (
     <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-      <div className="px-4 py-3 flex items-center justify-between dark:border-gray-700">
+      <div className="px-4 py-3 flex items-center justify-between">
         <div>
           <div className="font-semibold text-sm text-gray-900 dark:text-gray-100">{employeeName}</div>
-          <div className="text-xs text-gray-500 dark:text-gray-400">
-            {entry.startTime} – {entry.endTime} · Pause: {entry.breakMinutes} min
-          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">{slotsLabel(displaySlots)}</div>
           {entry.activity && <div className="text-xs text-gray-400 dark:text-gray-500">{entry.activity}</div>}
           {entry.note && <div className="text-xs text-gray-400 dark:text-gray-500 italic">{entry.note}</div>}
         </div>
         <div className="flex items-center gap-2">
-          <span className="font-bold text-sm text-primary-700">{formatHours(entry.totalHours)}</span>
+          <span className="font-bold text-sm text-primary-700 dark:text-primary-400">{formatHours(entry.totalHours)}</span>
           <button onClick={() => setEditing(!editing)} className="p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
             {editing ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
@@ -613,16 +655,13 @@ function TimeEntryCard({ entry, employeeOptions }: { entry: TimeEntry; employeeO
       </div>
       {editing && (
         <div className="border-t border-gray-100 dark:border-gray-700 px-4 py-3 space-y-3 bg-gray-50 dark:bg-gray-700">
-          <div className="grid grid-cols-3 gap-2">
-            <Input label="Von" type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} />
-            <Input label="Bis" type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} />
-            <Input label="Pause (min)" type="number" value={form.breakMinutes} onChange={e => setForm(f => ({ ...f, breakMinutes: e.target.value }))} />
+          <SlotsInput slots={slots} onChange={setSlots} />
+          <div className="text-sm bg-white dark:bg-gray-800 rounded-lg px-3 py-2 border border-gray-200 dark:border-gray-600 flex justify-between">
+            <span>Total Stunden</span>
+            <strong>{formatHours(calcSlotsHours(slots))}</strong>
           </div>
-          <div className="text-sm bg-white rounded-lg px-3 py-2 border border-gray-200">
-            Total: <strong>{formatHours(calcTotalHours(form.startTime, form.endTime, Number(form.breakMinutes)))}</strong>
-          </div>
-          <Input label="Tätigkeit" value={form.activity} onChange={e => setForm(f => ({ ...f, activity: e.target.value }))} />
-          <Input label="Notiz" value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} />
+          <Input label="Tätigkeit" value={activity} onChange={e => setActivity(e.target.value)} />
+          <Input label="Notiz" value={note} onChange={e => setNote(e.target.value)} />
           <Button size="sm" onClick={handleSave}><Check size={14} /> Speichern</Button>
         </div>
       )}
