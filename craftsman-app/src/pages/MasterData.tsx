@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import SignatureCanvas from 'react-signature-canvas';
 import { useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import { Users, Truck, Package, Building2, Plus, Check, X, Upload, Cloud, Copy, RefreshCw, Pencil, Download, FolderOpen, Bell, BellOff, LogIn, LogOut } from 'lucide-react';
@@ -76,6 +77,8 @@ function CompanyTab() {
     logoUrl: '', companySignature: '', bankAccount: '', adminPin: '',
   });
   const [saving, setSaving] = useState(false);
+  const [showSignPad, setShowSignPad] = useState(false);
+  const sigRef = useRef<SignatureCanvas>(null);
 
   useEffect(() => {
     if (company) {
@@ -115,6 +118,13 @@ function CompanyTab() {
     const reader = new FileReader();
     reader.onload = (ev) => setForm(f => ({ ...f, companySignature: ev.target?.result as string }));
     reader.readAsDataURL(file);
+  };
+
+  const handleSavePadSignature = () => {
+    if (!sigRef.current || sigRef.current.isEmpty()) return;
+    const dataUrl = sigRef.current.getCanvas().toDataURL('image/png');
+    setForm(f => ({ ...f, companySignature: dataUrl }));
+    setShowSignPad(false);
   };
 
   const handleSave = async () => {
@@ -167,17 +177,56 @@ function CompanyTab() {
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
         <h3 className="font-semibold text-sm text-gray-700 dark:text-gray-200">Firmenstempel / Unterschrift (PDF)</h3>
         <p className="text-xs text-gray-500 dark:text-gray-400">Wird im PDF unten rechts bei der Kundenbestätigung eingeblendet.</p>
-        {form.companySignature ? (
-          <div className="flex items-center gap-3">
-            <img src={form.companySignature} alt="Firmenstempel" className="h-14 object-contain border border-gray-200 rounded-lg p-1 bg-white" />
-            <button type="button" onClick={() => setForm(f => ({ ...f, companySignature: '' }))} className="text-xs text-red-600 hover:text-red-700 font-medium">Entfernen</button>
+        {form.companySignature && !showSignPad ? (
+          <div className="space-y-2">
+            <div className="border border-gray-200 dark:border-gray-600 rounded-xl p-2 bg-white dark:bg-gray-700">
+              <img src={form.companySignature} alt="Firmenstempel" className="h-16 object-contain mx-auto" />
+            </div>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => { setShowSignPad(true); setTimeout(() => sigRef.current?.clear(), 50); }} className="flex-1 text-xs py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700">
+                Neu zeichnen
+              </button>
+              <label className="flex-1 text-center text-xs py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer">
+                <Upload size={12} className="inline mr-1" />Hochladen
+                <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleSignatureUpload} />
+              </label>
+              <button type="button" onClick={() => setForm(f => ({ ...f, companySignature: '' }))} className="text-xs px-3 py-2 rounded-xl text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20">
+                Löschen
+              </button>
+            </div>
+          </div>
+        ) : showSignPad ? (
+          <div className="space-y-2">
+            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl overflow-hidden bg-white dark:bg-gray-700">
+              <SignatureCanvas
+                ref={sigRef}
+                canvasProps={{ width: 500, height: 160, className: 'w-full touch-none' }}
+                backgroundColor="rgba(255,255,255,0)"
+              />
+            </div>
+            <p className="text-xs text-gray-400 text-center">Mit dem Finger unterschreiben oder Stempel zeichnen</p>
+            <div className="flex gap-2">
+              <button type="button" onClick={() => sigRef.current?.clear()} className="flex-1 text-xs py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">Leeren</button>
+              <button type="button" onClick={() => setShowSignPad(false)} className="text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 text-gray-600 dark:text-gray-300">Abbrechen</button>
+              <button type="button" onClick={handleSavePadSignature} className="flex-1 text-xs py-2 rounded-xl bg-primary-600 text-white font-medium">Übernehmen</button>
+            </div>
           </div>
         ) : (
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-primary-600 border border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
-            <Upload size={16} />
-            <span>Stempel / Unterschrift hochladen (PNG / JPG)</span>
-            <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleSignatureUpload} />
-          </label>
+          <div className="space-y-2">
+            <button
+              type="button"
+              onClick={() => { setShowSignPad(true); setTimeout(() => sigRef.current?.clear(), 50); }}
+              className="w-full flex items-center justify-center gap-2 text-sm text-primary-600 border-2 border-dashed border-primary-300 dark:border-primary-700 rounded-xl p-4 hover:bg-primary-50 dark:hover:bg-primary-900/20"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 17h4l10-10-4-4L3 13v4z"/><line x1="14" y1="4" x2="17" y2="7"/></svg>
+              Mit Finger unterschreiben / Stempel zeichnen
+            </button>
+            <label className="flex items-center justify-center gap-2 cursor-pointer text-sm text-gray-600 dark:text-gray-400 border border-gray-200 dark:border-gray-600 rounded-xl p-3 hover:bg-gray-50 dark:hover:bg-gray-700">
+              <Upload size={15} />
+              <span>Bild hochladen (PNG / JPG)</span>
+              <input type="file" accept="image/png,image/jpeg,image/jpg" className="hidden" onChange={handleSignatureUpload} />
+            </label>
+          </div>
         )}
       </div>
       <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 space-y-3">
