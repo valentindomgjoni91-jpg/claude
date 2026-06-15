@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import SignatureCanvas from 'react-signature-canvas';
-import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText, ClipboardList, ArrowLeft } from 'lucide-react';
+import { Check, Plus, Trash2, Download, PenTool, X, Share2, Copy, MoreVertical, Receipt, Camera, Image, FileText, ArrowLeft } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
@@ -29,12 +29,6 @@ import { sharePdf, sendByEmail, buildRegiReportEmailBody } from '../utils/share'
 import { duplicateRegiReport } from '../hooks/useDuplicate';
 import type { RegiPosition, Material, Machine } from '../types';
 
-const POSITION_TYPES = [
-  { value: 'labor', label: 'Arbeit' },
-  { value: 'material', label: 'Material' },
-  { value: 'machine', label: 'Maschinen' },
-  { value: 'extra', label: 'Zusatzkosten' },
-];
 
 const DEFAULT_CONDITIONS = `Arbeitsstunden: CHF 75.00/h
 Material: gemäss Aufwand + 15% Aufschlag
@@ -515,141 +509,234 @@ function PositionsTab({ positions, onEnsureReport, materials, machines, projectI
   projectId: string;
 }) {
   const { isAdmin } = useAdmin();
-  const [adding, setAdding] = useState(false);
+  const [addingType, setAddingType] = useState<'labor' | 'material' | 'machine' | null>(null);
   const [importModalOpen, setImportModalOpen] = useState(false);
   const dailyReports = useDailyReports(projectId || undefined);
-  const [form, setForm] = useState({
-    type: 'labor',
-    description: '',
-    quantity: '1',
-    unit: 'h',
-    unitPrice: '75',
-  });
-  const set = (k: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
-    setForm(f => ({ ...f, [k]: e.target.value }));
 
-  const handleMaterialSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const mat = materials.find(m => m.id === e.target.value);
-    if (mat) {
-      setForm(f => ({ ...f, description: mat.name, unit: mat.unit, unitPrice: mat.unitPrice.toString() }));
-    }
-  };
+  const [laborForm, setLaborForm] = useState({ description: '', hours: '1', unitPrice: '75' });
+  const [matForm, setMatForm] = useState({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0' });
+  const [machForm, setMachForm] = useState({ machineId: '', description: '', hours: '1', unitPrice: '0' });
 
-  const handleMachineSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const machine = machines.find(m => m.id === e.target.value);
-    if (machine) {
-      setForm(f => ({ ...f, description: machine.name, unitPrice: machine.hourlyRate.toString(), unit: 'h' }));
-    }
-  };
+  const laborItems = positions.filter(p => p.type === 'labor');
+  const matItems = positions.filter(p => p.type === 'material');
+  const machItems = positions.filter(p => p.type === 'machine');
+  const extraItems = positions.filter(p => p.type === 'extra');
 
-  const handleAdd = async () => {
-    if (!form.description) return;
+  const addPosition = async (type: RegiPosition['type'], description: string, quantity: number, unit: string, unitPrice: number) => {
+    if (!description) return;
     const rId = await onEnsureReport();
-    const qty = Number(form.quantity);
-    const price = Number(form.unitPrice);
     await addRegiPosition({
       regiReportId: rId,
-      type: form.type as RegiPosition['type'],
-      description: form.description,
-      quantity: qty,
-      unit: form.unit,
-      unitPrice: price,
-      total: qty * price,
+      type,
+      description,
+      quantity,
+      unit,
+      unitPrice,
+      total: quantity * unitPrice,
       sortOrder: positions.length,
     });
-    setAdding(false);
-    setForm({ type: 'labor', description: '', quantity: '1', unit: 'h', unitPrice: '75' });
+    setAddingType(null);
   };
 
-  const typeGroups = POSITION_TYPES.map(t => ({
-    ...t,
-    items: positions.filter(p => p.type === t.value),
-  }));
+  const renderPositionRow = (pos: RegiPosition, i: number) => (
+    <div key={pos.id} className="px-4 py-3 flex justify-between items-center border-b border-gray-50 dark:border-gray-700 last:border-0">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400 font-mono w-4">{i + 1}.</span>
+          <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 ml-6">
+          {pos.quantity} {pos.unit}{isAdmin ? ` × ${formatCurrency(pos.unitPrice)}` : ''}
+        </div>
+      </div>
+      <div className="flex items-center gap-2 flex-shrink-0">
+        {isAdmin && <span className="font-bold text-sm text-gray-700 dark:text-gray-200">{formatCurrency(pos.total)}</span>}
+        <button onClick={() => deleteRegiPosition(pos.id)} className="p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </div>
+  );
+
+  const sectionHeader = (label: string, total: number) => (
+    <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-600 flex justify-between items-center">
+      <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{label}</span>
+      {isAdmin && total > 0 && <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(total)}</span>}
+    </div>
+  );
 
   return (
     <div className="space-y-3">
-      {typeGroups.map(group => {
-        if (group.items.length === 0) return null;
-        const subtotal = group.items.reduce((s, p) => s + p.total, 0);
-        return (
-          <div key={group.value} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="px-4 py-2.5 bg-gray-50 dark:bg-gray-700 border-b border-gray-100 dark:border-gray-700 flex justify-between">
-              <span className="text-sm font-semibold text-gray-700 dark:text-gray-200">{group.label}</span>
-              {isAdmin && <span className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(subtotal)}</span>}
-            </div>
-            {group.items.map((pos, i) => (
-              <div key={pos.id} className="px-4 py-3 flex justify-between items-start border-b border-gray-50 dark:border-gray-700 last:border-0">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-gray-400 font-mono">{i + 1}.</span>
-                    <span className="text-sm text-gray-900 dark:text-gray-100">{pos.description}</span>
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 ml-5">
-                    {pos.quantity} {pos.unit}{isAdmin && ` × ${formatCurrency(pos.unitPrice)}`}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 flex-shrink-0">
-                  {isAdmin && <span className="font-bold text-sm">{formatCurrency(pos.total)}</span>}
-                  <button onClick={() => deleteRegiPosition(pos.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500">
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        );
-      })}
 
-      {adding && (
-        <div className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-primary-200 dark:border-primary-700 p-4 space-y-3">
-          <h4 className="font-semibold text-sm">Position hinzufügen</h4>
-          <Select label="Typ" options={POSITION_TYPES} value={form.type} onChange={set('type')} />
-          {form.type === 'material' && materials.length > 0 && (
-            <Select
-              label="Aus Stammdaten"
-              options={materials.map(m => ({ value: m.id, label: m.name }))}
-              placeholder="Wählen oder manuell..."
-              onChange={handleMaterialSelect}
-              value=""
+      {/* ── Arbeit ── */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        {sectionHeader('Arbeit', laborItems.reduce((s, p) => s + p.total, 0))}
+        {laborItems.map((pos, i) => renderPositionRow(pos, i))}
+
+        {addingType === 'labor' ? (
+          <div className="p-4 space-y-3 border-t border-gray-100 dark:border-gray-700">
+            <Input
+              label="Beschreibung *"
+              value={laborForm.description}
+              onChange={e => setLaborForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="z.B. Bodenbeläge verlegen"
             />
-          )}
-          {form.type === 'machine' && machines.length > 0 && (
-            <Select
-              label="Aus Stammdaten"
-              options={machines.map(m => ({ value: m.id, label: m.name }))}
-              placeholder="Wählen oder manuell..."
-              onChange={handleMachineSelect}
-              value=""
-            />
-          )}
-          <Input label="Beschreibung *" value={form.description} onChange={set('description')} placeholder="z.B. Mauerwerk erstellen" />
-          <div className={`grid gap-2 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
-            <Input label="Menge" type="number" value={form.quantity} onChange={set('quantity')} />
-            <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={form.unit} onChange={set('unit')} />
-            {isAdmin && <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />}
-          </div>
-          {isAdmin && (
-            <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
-              Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
+            <div className={`grid gap-2 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+              <Input
+                label="Stunden"
+                type="number"
+                value={laborForm.hours}
+                onChange={e => setLaborForm(f => ({ ...f, hours: e.target.value }))}
+                min="0.5"
+                step="0.5"
+              />
+              {isAdmin && (
+                <Input
+                  label="Satz (CHF/h)"
+                  type="number"
+                  value={laborForm.unitPrice}
+                  onChange={e => setLaborForm(f => ({ ...f, unitPrice: e.target.value }))}
+                />
+              )}
             </div>
-          )}
-          <div className="flex gap-2">
-            <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Hinzufügen</Button>
-            <Button size="sm" variant="ghost" onClick={() => setAdding(false)}>Abbrechen</Button>
+            {isAdmin && (
+              <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
+                Total: <strong>{formatCurrency(Number(laborForm.hours) * Number(laborForm.unitPrice))}</strong>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" onClick={() => addPosition('labor', laborForm.description, Number(laborForm.hours), 'h', Number(laborForm.unitPrice))}>
+                <Check size={14} /> Hinzufügen
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setLaborForm({ description: '', hours: '1', unitPrice: '75' }); }}>
+                Abbrechen
+              </Button>
+            </div>
           </div>
+        ) : (
+          <button
+            onClick={() => setAddingType('labor')}
+            className="w-full px-4 py-3 flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 font-medium border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Plus size={16} /> Arbeit hinzufügen
+          </button>
+        )}
+      </div>
+
+      {/* ── Material ── */}
+      <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+        {sectionHeader('Material', matItems.reduce((s, p) => s + p.total, 0))}
+        {matItems.map((pos, i) => renderPositionRow(pos, i))}
+
+        {addingType === 'material' ? (
+          <div className="p-4 space-y-3 border-t border-gray-100 dark:border-gray-700">
+            {materials.length > 0 && (
+              <Select
+                label="Aus Stammdaten"
+                options={materials.map(m => ({ value: m.id, label: m.name }))}
+                placeholder="Wählen oder manuell…"
+                value={matForm.materialId}
+                onChange={e => {
+                  const mat = materials.find(m => m.id === e.target.value);
+                  if (mat) setMatForm(f => ({ ...f, materialId: e.target.value, description: mat.name, unit: mat.unit, unitPrice: mat.unitPrice.toString() }));
+                }}
+              />
+            )}
+            <Input
+              label="Bezeichnung *"
+              value={matForm.description}
+              onChange={e => setMatForm(f => ({ ...f, description: e.target.value }))}
+              placeholder="z.B. Kies 0-32"
+            />
+            <div className={`grid gap-2 ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'}`}>
+              <Input label="Menge" type="number" value={matForm.quantity} onChange={e => setMatForm(f => ({ ...f, quantity: e.target.value }))} />
+              <Select label="Einheit" options={UNITS.map(u => ({ value: u, label: u }))} value={matForm.unit} onChange={e => setMatForm(f => ({ ...f, unit: e.target.value }))} />
+              {isAdmin && <Input label="EP (CHF)" type="number" value={matForm.unitPrice} onChange={e => setMatForm(f => ({ ...f, unitPrice: e.target.value }))} />}
+            </div>
+            {isAdmin && (
+              <div className="text-sm bg-gray-50 dark:bg-gray-700 dark:text-gray-200 rounded-lg px-3 py-2">
+                Total: <strong>{formatCurrency(Number(matForm.quantity) * Number(matForm.unitPrice))}</strong>
+              </div>
+            )}
+            <div className="flex gap-2">
+              <Button size="sm" className="flex-1" onClick={() => addPosition('material', matForm.description, Number(matForm.quantity), matForm.unit, Number(matForm.unitPrice))}>
+                <Check size={14} /> Hinzufügen
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setMatForm({ materialId: '', description: '', quantity: '1', unit: 'Stk', unitPrice: '0' }); }}>
+                Abbrechen
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={() => setAddingType('material')}
+            className="w-full px-4 py-3 flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 font-medium border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+          >
+            <Plus size={16} /> Material hinzufügen
+          </button>
+        )}
+      </div>
+
+      {/* ── Maschinen (nur wenn Einträge vorhanden oder gerade hinzufügen) ── */}
+      {(machItems.length > 0 || addingType === 'machine') && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          {sectionHeader('Maschinen', machItems.reduce((s, p) => s + p.total, 0))}
+          {machItems.map((pos, i) => renderPositionRow(pos, i))}
+          {addingType === 'machine' ? (
+            <div className="p-4 space-y-3 border-t border-gray-100 dark:border-gray-700">
+              {machines.length > 0 && (
+                <Select
+                  label="Aus Stammdaten"
+                  options={machines.map(m => ({ value: m.id, label: m.name }))}
+                  placeholder="Wählen oder manuell…"
+                  value={machForm.machineId}
+                  onChange={e => {
+                    const machine = machines.find(m => m.id === e.target.value);
+                    if (machine) setMachForm(f => ({ ...f, machineId: e.target.value, description: machine.name, unitPrice: machine.hourlyRate.toString() }));
+                  }}
+                />
+              )}
+              <Input label="Bezeichnung *" value={machForm.description} onChange={e => setMachForm(f => ({ ...f, description: e.target.value }))} placeholder="z.B. Bagger CAT 320" />
+              <div className={`grid gap-2 ${isAdmin ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                <Input label="Stunden" type="number" value={machForm.hours} onChange={e => setMachForm(f => ({ ...f, hours: e.target.value }))} min="0.5" step="0.5" />
+                {isAdmin && <Input label="Satz (CHF/h)" type="number" value={machForm.unitPrice} onChange={e => setMachForm(f => ({ ...f, unitPrice: e.target.value }))} />}
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" className="flex-1" onClick={() => addPosition('machine', machForm.description, Number(machForm.hours), 'h', Number(machForm.unitPrice))}>
+                  <Check size={14} /> Hinzufügen
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => { setAddingType(null); setMachForm({ machineId: '', description: '', hours: '1', unitPrice: '0' }); }}>
+                  Abbrechen
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <button
+              onClick={() => setAddingType('machine')}
+              className="w-full px-4 py-3 flex items-center gap-2 text-sm text-primary-600 dark:text-primary-400 font-medium border-t border-gray-100 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              <Plus size={16} /> Maschine hinzufügen
+            </button>
+          )}
         </div>
       )}
 
-      {!adding && (
-        <Button variant="outline" className="w-full" onClick={() => setImportModalOpen(true)}>
-          <ClipboardList size={16} /> Tagesrapport übernehmen
-        </Button>
+      {/* ── Maschinen hinzufügen (wenn noch keine Einträge) ── */}
+      {machItems.length === 0 && addingType !== 'machine' && (
+        <button
+          onClick={() => setAddingType('machine')}
+          className="w-full px-4 py-3 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500 border border-dashed border-gray-200 dark:border-gray-600 rounded-2xl hover:border-gray-300 dark:hover:border-gray-500 transition-colors"
+        >
+          <Plus size={16} /> Maschine hinzufügen
+        </button>
       )}
 
-      {!adding && (
-        <Button variant="outline" className="w-full" onClick={() => setAdding(true)}>
-          <Plus size={16} /> Position hinzufügen
-        </Button>
+      {/* ── Zusatzpositionen (extra) ── */}
+      {extraItems.length > 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 overflow-hidden">
+          {sectionHeader('Zusatzkosten', extraItems.reduce((s, p) => s + p.total, 0))}
+          {extraItems.map((pos, i) => renderPositionRow(pos, i))}
+        </div>
       )}
 
       <Modal open={importModalOpen} onClose={() => setImportModalOpen(false)} title="Tagesrapport übernehmen">
