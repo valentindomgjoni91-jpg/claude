@@ -33,3 +33,7 @@ export async function updateProject(id: string, data: Partial<Project>): Promise
 export async function archiveProject(id: string): Promise<void> {
   await db.projects.update(id, { status: 'archived', updatedAt: nowISO() });
 }
+
+export async function deleteProject(id: string): Promise<void> {
+  await db.projects.delete(id);
+}

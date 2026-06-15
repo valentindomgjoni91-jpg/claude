@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { Check, Archive, ArrowLeft } from 'lucide-react';
+import { Check, Archive, ArrowLeft, Trash2 } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import Select from '../components/ui/Select';
 import Textarea from '../components/ui/Textarea';
-import { useProject, createProject, updateProject, archiveProject } from '../hooks/useProjects';
+import { useProject, createProject, updateProject, archiveProject, deleteProject } from '../hooks/useProjects';
 import type { ProjectStatus } from '../types';
 import { useEmployees } from '../hooks/useMasterData';
 import { todayISO } from '../utils';
@@ -77,6 +77,13 @@ export default function ProjectForm() {
     navigate('/projects');
   };
 
+  const handleDelete = async () => {
+    if (!id) return;
+    if (!window.confirm('Projekt wirklich löschen? Dieser Vorgang kann nicht rückgängig gemacht werden.')) return;
+    await deleteProject(id);
+    navigate('/projects');
+  };
+
   const employeeOptions = employees?.map(e => ({
     value: e.id,
     label: `${e.firstName} ${e.lastName}`,
@@ -130,6 +137,11 @@ export default function ProjectForm() {
         {isEdit && (
           <Button variant="danger" className="w-full" onClick={handleArchive}>
             <Archive size={16} /> Projekt archivieren
+          </Button>
+        )}
+        {isEdit && (
+          <Button variant="danger" className="w-full" onClick={handleDelete}>
+            <Trash2 size={16} /> Projekt löschen
           </Button>
         )}
 
