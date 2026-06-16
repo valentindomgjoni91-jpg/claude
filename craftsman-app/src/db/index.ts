@@ -67,26 +67,6 @@ export async function seedDefaultData(): Promise<void> {
     footerText: 'Zahlbar innert 30 Tagen. Vielen Dank für Ihr Vertrauen.',
   });
 
-  const employeeIds = [uuidv4(), uuidv4(), uuidv4()];
-  await db.employees.bulkAdd([
-    { id: employeeIds[0], firstName: 'Hans', lastName: 'Müller', role: 'foreman', hourlyRate: 75, active: true },
-    { id: employeeIds[1], firstName: 'Peter', lastName: 'Schmid', role: 'worker', hourlyRate: 65, active: true },
-    { id: employeeIds[2], firstName: 'Anna', lastName: 'Keller', role: 'office', hourlyRate: 70, active: true },
-  ]);
-
-  await db.machines.bulkAdd([
-    { id: uuidv4(), name: 'Bagger CAT 320', type: 'Bagger', licensePlate: 'ZH 123 456', hourlyRate: 120, active: true },
-    { id: uuidv4(), name: 'Mercedes Sprinter', type: 'Fahrzeug', licensePlate: 'ZH 654 321', hourlyRate: 45, active: true },
-    { id: uuidv4(), name: 'Rüttelplatte Wacker', type: 'Maschine', hourlyRate: 25, active: true },
-  ]);
-
-  await db.materials.bulkAdd([
-    { id: uuidv4(), name: 'Beton C25/30', unit: 'm³', unitPrice: 180, category: 'Beton', active: true },
-    { id: uuidv4(), name: 'Kies 0-32', unit: 'to', unitPrice: 45, category: 'Schüttgut', active: true },
-    { id: uuidv4(), name: 'Armierungsstahl', unit: 'kg', unitPrice: 2.5, category: 'Stahl', active: true },
-    { id: uuidv4(), name: 'Schalung', unit: 'm²', unitPrice: 35, category: 'Holz', active: true },
-  ]);
-
   const projectId = uuidv4();
   await db.projects.add({
     id: projectId,
@@ -96,7 +76,6 @@ export async function seedDefaultData(): Promise<void> {
     siteAddress: 'Baustrasse 10, 8002 Zürich',
     description: 'Neubau EFH mit Garage und Gartenanlage',
     status: 'active',
-    responsibleId: employeeIds[0],
     startDate: '2026-03-01',
     createdAt: now,
     updatedAt: now,
@@ -105,26 +84,35 @@ export async function seedDefaultData(): Promise<void> {
 
 export async function cleanupDemoData(): Promise<void> {
   try {
-    const demoNames = [
+    const demoEmployees = [
       { firstName: 'Hans', lastName: 'Müller' },
       { firstName: 'Peter', lastName: 'Schmid' },
       { firstName: 'Anna', lastName: 'Keller' },
     ];
-    for (const { firstName, lastName } of demoNames) {
-      const employees = await db.employees
+    for (const { firstName, lastName } of demoEmployees) {
+      const found = await db.employees
         .where('lastName').equals(lastName)
         .filter(e => e.firstName === firstName)
         .toArray();
-      for (const emp of employees) {
-        await db.employees.delete(emp.id);
-      }
+      for (const emp of found) await db.employees.delete(emp.id);
     }
+
+    const demoMachineNames = ['Bagger CAT 320', 'Mercedes Sprinter', 'Rüttelplatte Wacker'];
+    for (const name of demoMachineNames) {
+      const found = await db.machines.where('name').equals(name).toArray();
+      for (const m of found) await db.machines.delete(m.id);
+    }
+
+    const demoMaterialNames = ['Beton C25/30', 'Kies 0-32', 'Armierungsstahl', 'Schalung'];
+    for (const name of demoMaterialNames) {
+      const found = await db.materials.where('name').equals(name).toArray();
+      for (const m of found) await db.materials.delete(m.id);
+    }
+
     const demoProjects = await db.projects
       .filter(p => p.title === 'Neubau Einfamilienhaus Muster')
       .toArray();
-    for (const proj of demoProjects) {
-      await db.projects.delete(proj.id);
-    }
+    for (const proj of demoProjects) await db.projects.delete(proj.id);
   } catch {
     // silently ignore errors
   }

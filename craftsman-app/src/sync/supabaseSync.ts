@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { db } from '../db';
+import { db, cleanupDemoData } from '../db';
 import { nowISO } from '../utils';
 import type {
   Project, DailyReport, TimeEntry, MaterialEntry, MachineEntry,
@@ -204,9 +204,11 @@ export async function syncNow(
   }
 
   if (errors.length < SYNC_TABLES.length) {
-    // Partial success is still worth recording pull time
     setLastPull();
   }
+
+  // Musterdaten nach jedem Sync entfernen (kommen sonst immer wieder zurück)
+  await cleanupDemoData();
 
   onProgress?.('');
   return { pushed, pulled, errors };
