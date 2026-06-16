@@ -51,11 +51,7 @@ export async function generateProjectReportPdf(data: ProjectReportPdfData): Prom
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
       const { w, h } = await fitImageSize(company.logoUrl, 60, 28);
-      const logoX = margin;
-      const logoY = (headerH - h) / 2;
-      doc.setFillColor(255, 255, 255);
-      doc.roundedRect(logoX - 1, logoY - 1, w + 2, h + 2, 2, 2, 'F');
-      doc.addImage(company.logoUrl, fmt, logoX, logoY, w, h);
+      doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
     } catch { /* skip */ }
   }
 
@@ -70,9 +66,9 @@ export async function generateProjectReportPdf(data: ProjectReportPdfData): Prom
     doc.text(company.name, infoX, 9);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
-    if (company.street) doc.text(company.street, infoX, 12.5);
-    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 16);
-    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 19.5);
+    if (company.street) doc.text(company.street, infoX, 13.5);
+    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 18);
+    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 22.5);
   }
 
   y = headerH + 8;
