@@ -49,7 +49,7 @@ export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<
   const headerH = 32;
   doc.setFillColor(29, 78, 216);
   doc.rect(0, 0, pageWidth, headerH, 'F');
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(0, 0, 0);
 
   if (company?.logoUrl) {
     try {
@@ -63,9 +63,9 @@ export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<
   doc.setFont('helvetica', 'bold');
   doc.text('TAGESRAPPORT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
 
-  // Company info — left-aligned block, right side of header
+  // Company info — right side, pushed to outer right edge
   if (company) {
-    const infoX = pageWidth - margin - 58;
+    const infoX = pageWidth - margin - 45;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8);
     doc.text(company.name, infoX, 9);
