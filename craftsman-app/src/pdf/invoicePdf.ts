@@ -81,7 +81,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<{ pdf: j
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
   doc.setTextColor(29, 78, 216);
-  doc.text('RECHNUNG', rightX, ry, { align: 'right' });
+  doc.text('RECHNUNG', pageWidth / 2, ry, { align: 'center' });
   ry += 10;
 
   doc.setFont('helvetica', 'normal');

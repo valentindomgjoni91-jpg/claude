@@ -44,10 +44,9 @@ export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<
     } catch { /* skip invalid logo */ }
   }
 
-  const titleX = company?.logoUrl ? margin + 33 : margin;
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('TAGESRAPPORT', titleX, 14);
+  doc.text('TAGESRAPPORT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');

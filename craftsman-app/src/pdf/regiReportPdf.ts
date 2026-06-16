@@ -40,19 +40,17 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   doc.rect(0, 0, pageWidth, headerH, 'F');
   doc.setTextColor(255, 255, 255);
 
-  let titleX = margin;
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
       const { w, h } = await fitImageSize(company.logoUrl, 40, 22);
       doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
-      titleX = margin + w + 6;
     } catch { /* skip invalid logo */ }
   }
 
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
-  doc.text('REGIERAPPORT', titleX, 14);
+  doc.text('REGIERAPPORT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
 
   doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
