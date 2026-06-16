@@ -43,7 +43,7 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      const { w, h } = await fitImageSize(company.logoUrl, 40, 22);
+      const { w, h } = await fitImageSize(company.logoUrl, 60, 28);
       doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
     } catch { /* skip invalid logo */ }
   }

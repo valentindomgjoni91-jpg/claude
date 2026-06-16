@@ -20,6 +20,20 @@ interface DailyReportPdfData {
   company: Company | null;
 }
 
+async function fitImageSize(dataUrl: string, maxW: number, maxH: number): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      resolve({ w, h });
+    };
+    img.onerror = () => resolve({ w: maxW, h: maxH });
+    img.src = dataUrl;
+  });
+}
+
 export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<jsPDF> {
   const { report, project, timeEntries, materialEntries, machineEntries, subcontractorEntries, photos, employees, machines, company } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -40,7 +54,8 @@ export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(company.logoUrl, fmt, margin, 5, 30, 22);
+      const { w, h } = await fitImageSize(company.logoUrl, 60, 28);
+      doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
     } catch { /* skip invalid logo */ }
   }
 

@@ -53,7 +53,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<{ pdf: j
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      const { w, h } = await fitImageSize(company.logoUrl, 40, 22);
+      const { w, h } = await fitImageSize(company.logoUrl, 60, 30);
       doc.addImage(company.logoUrl, fmt, margin, y, w, h);
       y += h + 4;
     } catch { y += 4; }
