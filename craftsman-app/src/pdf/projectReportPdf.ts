@@ -20,7 +20,21 @@ export interface ProjectReportPdfData {
   employeeName?: string;
 }
 
-export function generateProjectReportPdf(data: ProjectReportPdfData): jsPDF {
+async function fitImageSize(dataUrl: string, maxW: number, maxH: number): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      resolve({ w, h });
+    };
+    img.onerror = () => resolve({ w: maxW, h: maxH });
+    img.src = dataUrl;
+  });
+}
+
+export async function generateProjectReportPdf(data: ProjectReportPdfData): Promise<jsPDF> {
   const { project, dailyReports, regiReports, stats, company } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
@@ -31,23 +45,35 @@ export function generateProjectReportPdf(data: ProjectReportPdfData): jsPDF {
   const headerH = 32;
   doc.setFillColor(29, 78, 216);
   doc.rect(0, 0, pageWidth, headerH, 'F');
-  doc.setTextColor(255, 255, 255);
+  doc.setTextColor(0, 0, 0);
 
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(company.logoUrl, fmt, margin, 5, 26, 20);
+      const { w, h } = await fitImageSize(company.logoUrl, 60, 28);
+      const logoX = margin;
+      const logoY = (headerH - h) / 2;
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(logoX - 1, logoY - 1, w + 2, h + 2, 2, 2, 'F');
+      doc.addImage(company.logoUrl, fmt, logoX, logoY, w, h);
     } catch { /* skip */ }
   }
 
-  const titleX = company?.logoUrl ? margin + 29 : margin;
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(12);
-  doc.text(company?.name || 'Handwerker Rapport', titleX, 12);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.text('Projektbericht', titleX, 18);
-  doc.text(formatDate(new Date()), pageWidth - margin, 12, { align: 'right' });
+  doc.setFontSize(16);
+  doc.text('PROJEKTBERICHT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
+
+  if (company) {
+    const infoX = pageWidth - margin - 45;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(company.name, infoX, 9);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    if (company.street) doc.text(company.street, infoX, 12.5);
+    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 16);
+    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 19.5);
+  }
 
   y = headerH + 8;
   doc.setTextColor(0, 0, 0);

@@ -90,7 +90,7 @@ export default function ProjectDetail() {
       db.dailyReports.where('projectId').equals(id).reverse().sortBy('date'),
       db.regiReports.where('projectId').equals(id).reverse().sortBy('date'),
     ]);
-    const pdf = generateProjectReportPdf({
+    const pdf = await generateProjectReportPdf({
       project,
       dailyReports: allDailyReports,
       regiReports: allRegiReports,

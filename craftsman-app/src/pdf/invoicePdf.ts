@@ -71,7 +71,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<{ pdf: j
   if (company?.zip || company?.city) {
     doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), margin, y); y += 4.5;
   }
-  if (company?.phone) { doc.text(company.phone, margin, y); y += 4.5; }
+  if (company?.phone) { doc.text(`Tel.: ${company.phone}`, margin, y); y += 4.5; }
   if (company?.email) { doc.text(company.email, margin, y); y += 4.5; }
   if (company?.vatNumber) { doc.text(`MwSt: ${company.vatNumber}`, margin, y); }
 
@@ -80,7 +80,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<{ pdf: j
   let ry = margin;
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(20);
-  doc.setTextColor(29, 78, 216);
+  doc.setTextColor(0, 0, 0);
   doc.text('RECHNUNG', pageWidth / 2, ry, { align: 'center' });
   ry += 10;
 
