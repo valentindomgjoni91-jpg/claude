@@ -71,9 +71,9 @@ export async function generateDailyReportPdf(data: DailyReportPdfData): Promise<
     doc.text(company.name, infoX, 9);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(6.5);
-    if (company.street) doc.text(company.street, infoX, 14);
-    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 18.5);
-    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 23);
+    if (company.street) doc.text(company.street, infoX, 12.5);
+    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 16);
+    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 19.5);
   }
   y = headerH + 8;
 
