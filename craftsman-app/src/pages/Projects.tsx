@@ -5,7 +5,8 @@ import { Plus, ChevronRight, FolderKanban, Search } from 'lucide-react';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
-import { useProjects } from '../hooks/useProjects';
+import { SwipeToDelete } from '../components/ui/SwipeToDelete';
+import { useProjects, deleteProject } from '../hooks/useProjects';
 import { useAdmin } from '../context/AdminContext';
 import type { ProjectStatus } from '../types';
 import { cn } from '../utils';
@@ -100,24 +101,25 @@ export default function Projects() {
 
         <div className="space-y-2 pb-4">
           {projects?.map((project) => (
-            <button
-              key={project.id}
-              onClick={() => navigate(`/projects/${project.id}`)}
-              className="w-full bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 text-left shadow-sm hover:shadow-md active:scale-[0.98] transition-all flex items-start gap-3"
-            >
-              <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
-                <FolderKanban size={18} className="text-primary-600 dark:text-primary-400" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">{project.title}</span>
-                  <ProjectStatusBadge status={project.status} />
+            <SwipeToDelete key={project.id} onDelete={() => deleteProject(project.id)}>
+              <button
+                onClick={() => navigate(`/projects/${project.id}`)}
+                className="w-full bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-4 text-left flex items-start gap-3"
+              >
+                <div className="w-10 h-10 bg-primary-50 dark:bg-primary-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <FolderKanban size={18} className="text-primary-600 dark:text-primary-400" />
                 </div>
-                <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">{project.clientName}</div>
-                <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{project.siteAddress}</div>
-              </div>
-              <ChevronRight size={18} className="text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />
-            </button>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-semibold text-gray-900 dark:text-gray-100 text-sm leading-tight">{project.title}</span>
+                    <ProjectStatusBadge status={project.status} />
+                  </div>
+                  <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">{project.clientName}</div>
+                  <div className="text-xs text-gray-400 dark:text-gray-500 truncate">{project.siteAddress}</div>
+                </div>
+                <ChevronRight size={18} className="text-gray-400 dark:text-gray-500 flex-shrink-0 mt-1" />
+              </button>
+            </SwipeToDelete>
           ))}
         </div>
       </div>

@@ -35,5 +35,32 @@ export async function archiveProject(id: string): Promise<void> {
 }
 
 export async function deleteProject(id: string): Promise<void> {
-  await db.projects.delete(id);
+  await db.transaction('rw', [
+    db.projects, db.dailyReports, db.regiReports, db.timeEntries,
+    db.materialEntries, db.machineEntries, db.subcontractorEntries,
+    db.regiPositions, db.photos,
+  ], async () => {
+    const dailyIds = (await db.dailyReports.where('projectId').equals(id).primaryKeys()) as string[];
+    const regiIds = (await db.regiReports.where('projectId').equals(id).primaryKeys()) as string[];
+
+    if (dailyIds.length > 0) {
+      await Promise.all([
+        db.timeEntries.where('reportId').anyOf(dailyIds).delete(),
+        db.materialEntries.where('reportId').anyOf(dailyIds).delete(),
+        db.machineEntries.where('reportId').anyOf(dailyIds).delete(),
+        db.subcontractorEntries.where('reportId').anyOf(dailyIds).delete(),
+        db.photos.where('reportId').anyOf(dailyIds).delete(),
+      ]);
+    }
+    if (regiIds.length > 0) {
+      await Promise.all([
+        db.regiPositions.where('regiReportId').anyOf(regiIds).delete(),
+        db.photos.where('reportId').anyOf(regiIds).delete(),
+      ]);
+    }
+
+    await db.dailyReports.where('projectId').equals(id).delete();
+    await db.regiReports.where('projectId').equals(id).delete();
+    await db.projects.delete(id);
+  });
 }
