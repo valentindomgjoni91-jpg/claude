@@ -52,20 +52,25 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   doc.setFont('helvetica', 'bold');
   doc.text('REGIERAPPORT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
 
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
+  // Company info — left-aligned block, right side of header
   if (company) {
-    doc.text(company.name, pageWidth - margin, 10, { align: 'right' });
-    doc.text(`${company.street}, ${company.zip} ${company.city}`, pageWidth - margin, 16, { align: 'right' });
-    if (company.phone) doc.text(company.phone, pageWidth - margin, 22, { align: 'right' });
+    const infoX = pageWidth - margin - 58;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.text(company.name, infoX, 9);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.5);
+    if (company.street) doc.text(company.street, infoX, 14);
+    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 18.5);
+    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 23);
   }
   y = headerH + 8;
 
-  // QR Code (top-right of first page after header)
+  // QR Code — below header in white area
   const qrText = `Regierapport/${data.report.id}`;
   const qrDataUrl = await generateQrDataUrl(qrText, 80);
   if (qrDataUrl) {
-    try { doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 12, headerH - 10, 12, 12); } catch { /* skip */ }
+    try { doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 18, headerH + 3, 18, 18); } catch { /* skip */ }
   }
 
   // Report info
