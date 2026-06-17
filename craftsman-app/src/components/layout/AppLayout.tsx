@@ -73,7 +73,7 @@ export default function AppLayout() {
       <header className="bg-primary-700 dark:bg-primary-900 text-white px-4 py-3 flex items-center justify-between flex-shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-2">
           <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-            <span className="text-xs font-bold">HR</span>
+            <span className="text-xs font-bold">NS</span>
           </div>
           <span className="font-semibold text-sm">NervaSys</span>
         </div>
