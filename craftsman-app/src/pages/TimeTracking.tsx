@@ -586,7 +586,7 @@ function TimesheetTab() {
     if (!employee || !preview) return;
     setGenerating(true);
     try {
-      const pdf = generateTimesheetPdf({
+      const pdf = await generateTimesheetPdf({
         employee,
         month,
         entries: preview.entries,

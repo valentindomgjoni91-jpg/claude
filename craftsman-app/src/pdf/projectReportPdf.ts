@@ -41,43 +41,60 @@ export async function generateProjectReportPdf(data: ProjectReportPdfData): Prom
   const margin = 15;
   let y: number;
 
-  // ── Header ────────────────────────────────────────────────────────────────
-  const headerH = 32;
-  doc.setFillColor(29, 78, 216);
-  doc.rect(0, 0, pageWidth, headerH, 'F');
+  // ── Header — clean white document style ─────────────────────────────────
   doc.setTextColor(0, 0, 0);
+  let headerBottom = margin;
 
+  // Logo top-left
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      const { w, h } = await fitImageSize(company.logoUrl, 60, 28);
-      doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
+      const { w, h } = await fitImageSize(company.logoUrl, 50, 22);
+      doc.addImage(company.logoUrl, fmt, margin, margin, w, h);
+      headerBottom = Math.max(headerBottom, margin + h);
     } catch { /* skip */ }
   }
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('PROJEKTBERICHT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
-
+  // Company info — left, below logo
   if (company) {
-    const infoX = pageWidth - margin - 45;
+    let cy = company.logoUrl ? margin + 26 : margin + 4;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text(company.name, infoX, 9);
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(company.name, margin, cy);
+    cy += 4.5;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    if (company.street) doc.text(company.street, infoX, 13.5);
-    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 18);
-    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 22.5);
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 90, 90);
+    if (company.street) { doc.text(company.street, margin, cy); cy += 4; }
+    if (company.zip || company.city) { doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), margin, cy); cy += 4; }
+    if (company.phone) { doc.text(`Tel.: ${company.phone}`, margin, cy); cy += 4; }
+    headerBottom = Math.max(headerBottom, cy);
   }
 
-  y = headerH + 8;
+  // Title — centered at top
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 0);
+  doc.text('PROJEKTBERICHT', pageWidth / 2, margin + 6, { align: 'center' });
+
+  // Date — top right
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(90, 90, 90);
+  doc.text(formatDate(new Date()), pageWidth - margin, margin + 6, { align: 'right' });
+
+  // Separator under header
+  y = headerBottom + 6;
+  doc.setDrawColor(210, 210, 210);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 7;
   doc.setTextColor(0, 0, 0);
 
   // ── Project header ────────────────────────────────────────────────────────
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(14);
-  doc.setTextColor(29, 78, 216);
+  doc.setTextColor(55, 65, 81);
   doc.text(project.title, margin, y);
   y += 6;
 
@@ -119,7 +136,7 @@ export async function generateProjectReportPdf(data: ProjectReportPdfData): Prom
     const x = margin + 6 + i * col;
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
-    doc.setTextColor(29, 78, 216);
+    doc.setTextColor(55, 65, 81);
     doc.text(statItems[i].value, x, y + 10);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
@@ -141,7 +158,7 @@ export async function generateProjectReportPdf(data: ProjectReportPdfData): Prom
   if (dailyReports.length > 0) {
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(29, 78, 216);
+    doc.setTextColor(55, 65, 81);
     doc.text(`Tagesrapporte (${dailyReports.length})`, margin, y);
     y += 2;
 
@@ -166,7 +183,7 @@ export async function generateProjectReportPdf(data: ProjectReportPdfData): Prom
     if (y > 230) { doc.addPage(); y = margin; }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(29, 78, 216);
+    doc.setTextColor(55, 65, 81);
     doc.text(`Regierapporte (${regiReports.length})`, margin, y);
     y += 2;
 

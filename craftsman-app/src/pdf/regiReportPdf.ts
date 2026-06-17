@@ -34,44 +34,57 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   const margin = 15;
   let y = margin;
 
-  // Header
-  const headerH = 32;
-  doc.setFillColor(29, 78, 216);
-  doc.rect(0, 0, pageWidth, headerH, 'F');
+  // ── Header — clean white document style ─────────────────────────────────
   doc.setTextColor(0, 0, 0);
+  let headerBottom = margin;
 
+  // Logo top-left
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      const { w, h } = await fitImageSize(company.logoUrl, 60, 28);
-      doc.addImage(company.logoUrl, fmt, margin, (headerH - h) / 2, w, h);
+      const { w, h } = await fitImageSize(company.logoUrl, 50, 22);
+      doc.addImage(company.logoUrl, fmt, margin, margin, w, h);
+      headerBottom = Math.max(headerBottom, margin + h);
     } catch { /* skip invalid logo */ }
   }
 
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('REGIERAPPORT', pageWidth / 2, headerH / 2 + 3, { align: 'center' });
-
-  // Company info — right side, pushed to outer right edge
+  // Company info — left, below logo
   if (company) {
-    const infoX = pageWidth - margin - 45;
+    let cy = company.logoUrl ? margin + 26 : margin + 4;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.text(company.name, infoX, 9);
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(company.name, margin, cy);
+    cy += 4.5;
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    if (company.street) doc.text(company.street, infoX, 13.5);
-    if (company.zip || company.city) doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), infoX, 18);
-    if (company.phone) doc.text(`Tel.: ${company.phone}`, infoX, 22.5);
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 90, 90);
+    if (company.street) { doc.text(company.street, margin, cy); cy += 4; }
+    if (company.zip || company.city) { doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), margin, cy); cy += 4; }
+    if (company.phone) { doc.text(`Tel.: ${company.phone}`, margin, cy); cy += 4; }
+    headerBottom = Math.max(headerBottom, cy);
   }
-  y = headerH + 8;
 
-  // QR Code — below header in white area
+  // Title — centered at top
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 0);
+  doc.text('REGIERAPPORT', pageWidth / 2, margin + 6, { align: 'center' });
+
+  // QR Code — top right
   const qrText = `Regierapport/${data.report.id}`;
   const qrDataUrl = await generateQrDataUrl(qrText, 80);
   if (qrDataUrl) {
-    try { doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 18, headerH + 3, 18, 18); } catch { /* skip */ }
+    try { doc.addImage(qrDataUrl, 'PNG', pageWidth - margin - 18, margin, 18, 18); } catch { /* skip */ }
+    headerBottom = Math.max(headerBottom, margin + 18);
   }
+
+  // Separator under header
+  y = headerBottom + 6;
+  doc.setDrawColor(210, 210, 210);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 7;
+  doc.setTextColor(0, 0, 0);
 
   // Report info
   doc.setTextColor(0, 0, 0);
@@ -123,7 +136,7 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(29, 78, 216);
+    doc.setTextColor(55, 65, 81);
     doc.text(typeLabels[type], margin, y);
     y += 4;
 
@@ -181,7 +194,7 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
   summaryRows.forEach(([label, value], i) => {
     const isTotal = i === summaryRows.length - 1;
     if (isTotal) {
-      doc.setFillColor(29, 78, 216);
+      doc.setFillColor(31, 41, 55);
       doc.rect(110, y - 4, pageWidth - margin - 110, 10, 'F');
       doc.setTextColor(255, 255, 255);
       doc.setFont('helvetica', 'bold');
@@ -227,7 +240,7 @@ export async function generateRegiReportPdf(data: RegiReportPdfData): Promise<js
     if (y > 200) { doc.addPage(); y = margin; }
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(10);
-    doc.setTextColor(29, 78, 216);
+    doc.setTextColor(55, 65, 81);
     doc.text('Fotos', margin, y);
     y += 5;
     const imgWidth = (pageWidth - margin * 2 - 5) / 2;

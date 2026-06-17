@@ -21,7 +21,21 @@ export interface TimesheetPdfData {
   company: Company | null;
 }
 
-export function generateTimesheetPdf(data: TimesheetPdfData): jsPDF {
+async function fitImageSize(dataUrl: string, maxW: number, maxH: number): Promise<{ w: number; h: number }> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    img.onload = () => {
+      const ratio = img.naturalWidth / img.naturalHeight;
+      let w = maxW, h = maxW / ratio;
+      if (h > maxH) { h = maxH; w = maxH * ratio; }
+      resolve({ w, h });
+    };
+    img.onerror = () => resolve({ w: maxW, h: maxH });
+    img.src = dataUrl;
+  });
+}
+
+export async function generateTimesheetPdf(data: TimesheetPdfData): Promise<jsPDF> {
   const { employee, month, entries, company } = data;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -29,38 +43,51 @@ export function generateTimesheetPdf(data: TimesheetPdfData): jsPDF {
   const margin = 15;
   let y: number;
 
-  // Header bar
-  const headerH = 28;
-  doc.setFillColor(29, 78, 216);
-  doc.rect(0, 0, pageWidth, headerH, 'F');
-  doc.setTextColor(255, 255, 255);
+  // ── Header — clean white document style ─────────────────────────────────
+  doc.setTextColor(0, 0, 0);
+  let headerBottom = margin;
 
+  // Logo top-left
   if (company?.logoUrl) {
     try {
       const fmt = company.logoUrl.startsWith('data:image/png') ? 'PNG' : 'JPEG';
-      doc.addImage(company.logoUrl, fmt, margin, 4, 26, 20);
+      const { w, h } = await fitImageSize(company.logoUrl, 50, 22);
+      doc.addImage(company.logoUrl, fmt, margin, margin, w, h);
+      headerBottom = Math.max(headerBottom, margin + h);
     } catch { /* skip */ }
   }
 
-  const titleX = company?.logoUrl ? margin + 29 : margin;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text(company?.name || 'Handwerker Rapport', titleX, 12);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.text([company?.street || '', `${company?.zip || ''} ${company?.city || ''}`].filter(Boolean).join(' · '), titleX, 18);
+  // Company info — left, below logo
+  if (company) {
+    let cy = company.logoUrl ? margin + 26 : margin + 4;
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.setTextColor(0, 0, 0);
+    doc.text(company.name, margin, cy);
+    cy += 4.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(90, 90, 90);
+    if (company.street) { doc.text(company.street, margin, cy); cy += 4; }
+    if (company.zip || company.city) { doc.text(`${company.zip || ''} ${company.city || ''}`.trim(), margin, cy); cy += 4; }
+    headerBottom = Math.max(headerBottom, cy);
+  }
 
-  y = headerH + 8;
+  // Title — centered at top
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(18);
+  doc.setTextColor(0, 0, 0);
+  doc.text('STUNDENZETTEL', pageWidth / 2, margin + 6, { align: 'center' });
+
+  // Separator under header
+  y = headerBottom + 6;
+  doc.setDrawColor(210, 210, 210);
+  doc.line(margin, y, pageWidth - margin, y);
+  y += 7;
   doc.setTextColor(0, 0, 0);
 
-  // Title
+  // Employee + month
   const monthName = new Date(`${month}-01`).toLocaleString('de-CH', { month: 'long', year: 'numeric' });
-
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(14);
-  doc.setTextColor(29, 78, 216);
-  doc.text('Stundenzettel', margin, y);
-  y += 7;
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(10);
@@ -116,7 +143,7 @@ export function generateTimesheetPdf(data: TimesheetPdfData): jsPDF {
         formatHours(e.totalHours),
       ]),
       styles: { fontSize: 8, cellPadding: 2.5 },
-      headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: 'bold' },
+      headStyles: { fillColor: [243, 244, 246], textColor: [55, 65, 81], fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 22 },
         1: { cellWidth: 50 },

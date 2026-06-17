@@ -160,7 +160,7 @@ export async function generateInvoicePdf(data: InvoicePdfData): Promise<{ pdf: j
     head: [['Beschreibung', 'Menge', 'Einheit', 'Einzelpreis', 'Betrag']],
     body: tableBody,
     styles: { fontSize: 9, cellPadding: 3 },
-    headStyles: { fillColor: [29, 78, 216], textColor: 255, fontStyle: 'bold' },
+    headStyles: { fillColor: [243, 244, 246], textColor: [55, 65, 81], fontStyle: 'bold' },
     columnStyles: {
       0: { cellWidth: 'auto' },
       1: { cellWidth: 20, halign: 'right' },
