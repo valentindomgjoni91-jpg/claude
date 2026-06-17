@@ -971,7 +971,7 @@ function RegiPhotosTab({ photos, onEnsureReport }: {
                   href={`https://maps.google.com/?q=${photo.latitude},${photo.longitude}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="absolute bottom-2 left-2 bg-blue-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
+                  className="absolute bottom-2 left-2 bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded-full"
                 >
                   GPS
                 </a>

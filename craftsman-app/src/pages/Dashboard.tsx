@@ -116,7 +116,7 @@ export default function Dashboard() {
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Stunden diese Woche</div>
         </Card>
         <Card className="text-center">
-          <div className="text-2xl font-bold text-blue-600">{todayReports ?? '—'}</div>
+          <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">{todayReports ?? '—'}</div>
           <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Rapporte heute</div>
         </Card>
         <Card className="text-center">

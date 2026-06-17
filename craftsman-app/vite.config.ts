@@ -12,7 +12,7 @@ export default defineConfig({
         name: 'Handwerker Rapport',
         short_name: 'Rapport',
         description: 'Tages- und Regierapport für Handwerksbetriebe',
-        theme_color: '#1d4ed8',
+        theme_color: '#334155',
         background_color: '#ffffff',
         display: 'standalone',
         orientation: 'portrait',
