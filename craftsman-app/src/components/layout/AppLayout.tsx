@@ -75,7 +75,7 @@ export default function AppLayout() {
           <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
             <span className="text-xs font-bold">HR</span>
           </div>
-          <span className="font-semibold text-sm">Handwerker Rapport</span>
+          <span className="font-semibold text-sm">NervaSys</span>
         </div>
         <div className="flex items-center gap-2">
           {syncPending > 0 && (

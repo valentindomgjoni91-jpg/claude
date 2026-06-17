@@ -9,8 +9,8 @@ export default defineConfig({
       registerType: 'prompt',
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
       manifest: {
-        name: 'Handwerker Rapport',
-        short_name: 'Rapport',
+        name: 'NervaSys',
+        short_name: 'NervaSys',
         description: 'Tages- und Regierapport für Handwerksbetriebe',
         theme_color: '#334155',
         background_color: '#ffffff',
