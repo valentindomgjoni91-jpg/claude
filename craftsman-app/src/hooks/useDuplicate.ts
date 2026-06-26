@@ -71,7 +71,7 @@ export async function duplicateRegiReport(sourceId: string): Promise<string> {
   const now = nowISO();
   const newPositions = positions.map(p => ({ ...p, id: uuidv4(), regiReportId: newId }));
 
-  await db.transaction('rw', db.regiReports, db.regiPositions, async () => {
+  await db.transaction('rw', [db.regiReports, db.regiPositions], async () => {
     await db.regiReports.add({
       ...source,
       id: newId,

@@ -966,7 +966,7 @@ function RegiPhotosTab({ photos, onEnsureReport }: {
               >
                 <Trash2 size={12} />
               </button>
-              {photo.latitude && (
+              {photo.latitude && photo.longitude && (
                 <a
                   href={`https://maps.google.com/?q=${photo.latitude},${photo.longitude}`}
                   target="_blank"

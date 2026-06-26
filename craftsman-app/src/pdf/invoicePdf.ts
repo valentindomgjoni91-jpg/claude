@@ -8,9 +8,14 @@ const INVOICE_CTR_KEY = 'craftsman_invoice_counter';
 function nextInvoiceNumber(): string {
   const year = new Date().getFullYear();
   const key = `${INVOICE_CTR_KEY}_${year}`;
-  const current = parseInt(localStorage.getItem(key) || '0', 10);
+  let current = 0;
+  try {
+    current = parseInt(localStorage.getItem(key) || '0', 10);
+  } catch {}
   const next = current + 1;
-  localStorage.setItem(key, String(next));
+  try {
+    localStorage.setItem(key, String(next));
+  } catch {}
   return `RE-${year}-${String(next).padStart(4, '0')}`;
 }
 

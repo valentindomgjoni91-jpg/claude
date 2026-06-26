@@ -30,7 +30,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     } else {
       document.documentElement.classList.remove('dark');
     }
-    localStorage.setItem('craftsman_theme', theme);
+    try { localStorage.setItem('craftsman_theme', theme); } catch {}
   }, [theme]);
 
   const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'));

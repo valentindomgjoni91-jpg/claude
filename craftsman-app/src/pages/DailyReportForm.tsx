@@ -746,7 +746,7 @@ function MaterialTab({ entries, materialOptions, materials, onEnsureReport, tota
             <Input label="EP (CHF)" type="number" value={form.unitPrice} onChange={set('unitPrice')} />
           </div>
           <div className="text-sm bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
-            Total: <strong>{formatCurrency(Number(form.quantity) * Number(form.unitPrice))}</strong>
+            Total: <strong>{formatCurrency((Number(form.quantity) || 0) * (Number(form.unitPrice) || 0))}</strong>
           </div>
           <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Optional" />
           <div className="flex gap-2">
@@ -850,7 +850,7 @@ function MachineTab({ entries, machineOptions, employeeOptions, machines, onEnsu
           <Select label="Fahrer (optional)" options={employeeOptions} placeholder="Wählen…" value={form.operatorId} onChange={set('operatorId')} />
           <Input label="Notiz" value={form.note} onChange={set('note')} placeholder="Optional" />
           <div className="text-sm bg-gray-50 dark:bg-gray-700 rounded-lg px-3 py-2">
-            Total: <strong>{formatCurrency(Number(form.hours) * Number(form.hourlyRate))}</strong>
+            Total: <strong>{formatCurrency((Number(form.hours) || 0) * (Number(form.hourlyRate) || 0))}</strong>
           </div>
           <div className="flex gap-2">
             <Button size="sm" onClick={handleAdd} className="flex-1"><Check size={14} /> Speichern</Button>
@@ -1072,7 +1072,7 @@ function PhotoCard({ photo }: { photo: Photo }) {
         >
           <Trash2 size={12} />
         </button>
-        {photo.latitude && (
+        {photo.latitude && photo.longitude && (
           <a
             href={`https://maps.google.com/?q=${photo.latitude},${photo.longitude}`}
             target="_blank"
